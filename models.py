@@ -5,6 +5,7 @@ from types import SimpleNamespace
 def load_config(path):
     with open(path, 'r') as file:
         configs = json.load(file)
+        print(f"Successfully loaded {len(configs)} scenarios.")
         return SimpleNamespace(**configs)
     
 class Simulation:
@@ -13,6 +14,8 @@ class Simulation:
         self.Table = pd.DataFrame()
         self.D = config['demand']
         self.return_levels = config['levels']
+        self.c_U = config['c_U']
+        self.c_O = config['c_O']
 
     def run(self):
 
@@ -62,7 +65,7 @@ class Simulation:
         self.Table["Sales"] = sales
         self.Table["Lost Sales"] = lost_sales
 
-        display(self.Table) #function only for jupyter notebook
+        display(self.Table) # type: ignore
 
     def eval(self):
         self.Overage = self.Table['Ending Inventory'].iloc[-1]
@@ -72,3 +75,7 @@ class Simulation:
         print(f"Overage: {self.Overage}")
         print(f"Underage: {self.Underage}")
         print(f"ASL: {self.ASL}")
+        print(f"Underage Costs{self.Underage * self.c_U}")
+        print(f"Overage Costs{self.Overage * self.c_O}")
+        print(f"Gross Demand: {self.Table['Gross Demand'].sum()}")
+        print(f""
