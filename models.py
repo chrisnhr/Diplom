@@ -1,5 +1,6 @@
 import json
 import pandas as pd
+import numpy as np
 from types import SimpleNamespace
 
 def load_config(path):
@@ -64,12 +65,13 @@ class Simulation:
             # Add returns to inventory
             if sales[id] > 0: # otherwise runs out of index
                 for i in range(len(self.return_levels)):
-                    self.Table.loc[id+i+1, "Returns"] = self.return_levels[i] * sales[id]
+                    self.Table.loc[id+i+1, "Returns"] = np.random.binomial(n=sales[id], p=self.return_levels[i])
 
         self.Table["Starting Inventory"] = starting_inventory
         self.Table["Ending Inventory"] = ending_inventory
         self.Table["Sales"] = sales
         self.Table["Lost Sales"] = lost_sales
+        self.Table["Net Demand"] = self.Table["Gross Demand"] - self.Table["Returns"]
 
         display(self.Table) # type: ignore
 
