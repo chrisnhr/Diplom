@@ -16,6 +16,7 @@ class Simulation:
         self.return_levels = config['levels']
         self.c_U = config['c_U']
         self.c_O = config['c_O']
+        self.scenario = config['name']
 
     def run(self):
 
@@ -23,6 +24,10 @@ class Simulation:
         self.Table["Gross Demand"] = self.D
         self.Table = pd.concat([self.Table, pd.DataFrame({'Gross Demand': [0] * len(self.return_levels)})], ignore_index=True)
         self.Table["Returns"] = 0.0 # to set column type to float for later returns
+        self.Table["Week"] = range(len(self.Table))
+
+        # Set the "Week" column as the index
+        self.Table.set_index("Week", inplace=True)
 
         # Initialize lists to store starting and ending inventory
         starting_inventory = []
@@ -39,7 +44,8 @@ class Simulation:
             starting_inventory.append(Q_temp)
 
             # assuming returns are available at the beginning of the week
-            Q_temp += self.Table["Returns"][id]
+            #Q_temp += self.Table["Returns"][id]
+            Q_temp += self.Table.loc[id, "Returns"] # Week number is interpreted as label of the index
 
             # demand can be fully met from inventory
             if Q_temp >= demand:
@@ -68,14 +74,35 @@ class Simulation:
         display(self.Table) # type: ignore
 
     def eval(self):
+        # Calculate evaluation metrics
         self.Overage = self.Table['Ending Inventory'].iloc[-1]
         self.Underage = self.Table['Lost Sales'].sum()
-        self.ASL = None
+        self.ASL = (1 - (len(self.Table[self.Table['Lost Sales'] > 0]) / len(self.Table))) * 100
+        
+        gross_demand = self.Table['Gross Demand'].sum()
+        demand_served = self.Table['Sales'].sum()
 
+        # Print results
+        print("Evaluation Results: \n ")
+        print(f"Order Quantity: {self.Q}")
         print(f"Overage: {self.Overage}")
         print(f"Underage: {self.Underage}")
-        print(f"ASL: {self.ASL}")
-        print(f"Underage Costs{self.Underage * self.c_U}")
-        print(f"Overage Costs{self.Overage * self.c_O}")
-        print(f"Gross Demand: {self.Table['Gross Demand'].sum()}")
-        print(f""
+        print(f"Underage Costs: {self.Underage * self.c_U:.2f}")
+        print(f"Overage Costs: {self.Overage * self.c_O:.2f}")
+        print(f"Gross Demand: {gross_demand}")
+        # Check for gross demand being zero
+        if gross_demand > 0:
+            print(f"Demand Served [%]: {demand_served / gross_demand * 100:.2f} %")
+        else:
+            print("Demand Served [%]: None")
+
+        # Handle cases where there are no lost sales
+        first_week_lost_sales = (
+            self.Table[self.Table['Lost Sales'] > 0].index[0]
+            if not self.Table[self.Table['Lost Sales'] > 0].empty
+            else "None"
+        )
+
+        print(f"First Week with Lost Sales: {first_week_lost_sales}")
+        print(f"Weeks with Lost Sales: {len(self.Table[self.Table['Lost Sales'] > 0])}")
+        print(f"Alpha Service Level [%]: {self.ASL:.2f} %")

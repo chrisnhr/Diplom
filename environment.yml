@@ -10,6 +10,7 @@ dependencies:
   - pandas
   - matplotlib
   - ipykernel
+  - streamlit
   - pip
   - pip:
       - git+https://github.com/takazawa/newsvendor-model
