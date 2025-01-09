@@ -1,7 +1,9 @@
 import os
+import subprocess
+import sys
 
 def create_folders():
-    folders = ['archive', 'configs', 'plots', 'data', 'results']
+    folders = ['archive', 'configs', 'plots', 'data']
 
     for folder in folders:
         try:
@@ -10,5 +12,16 @@ def create_folders():
         except Exception as e:
             print(f"An error occurred while creating '{folder}': {e}")
 
+def setup_conda_environment():
+    if os.path.isfile('environment.yml'):
+        try:
+            subprocess.run(['conda', 'env', 'create', '-f', 'environment.yml'], check=True)
+            print("Conda environment set up successfully.")
+        except subprocess.CalledProcessError as e:
+            print(f"An error occurred while setting up the conda environment: {e}")
+    else:
+        print("No 'environment.yml' file found. Skipping conda environment setup.")
+
 if __name__ == "__main__":
     create_folders()
+    setup_conda_environment()

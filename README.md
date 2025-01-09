@@ -1,9 +1,10 @@
-# diplom
+# Diplom
 
-setup:
-conda env create -f environment.yml
-conda activate diplom
-conda install ...
-conda env update -f environment.yml
-conda deactivate
-conda remove --name thesis_env --all
+This repository serves as the repository for my diploma thesis.
+
+## Setup Instructions
+
+To set up the project environment and create the necessary directories, simply run the following command:
+
+```bash
+python setup.py
