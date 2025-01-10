@@ -1,13 +1,12 @@
 import json
 import pandas as pd
 import numpy as np
-from types import SimpleNamespace
 
-def load_config(path):
+def load_json(path):
     with open(path, 'r') as file:
-        configs = json.load(file)
-        print(f"Successfully loaded {len(configs)} scenarios.")
-        return SimpleNamespace(**configs)
+        dict = json.load(file)
+        print(f"Successfully loaded json file from {path}")
+        return dict
     
 class Simulation:
     def __init__(self, Q: int, config: dict):
