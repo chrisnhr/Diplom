@@ -1,6 +1,7 @@
 import json
 import pandas as pd
 import numpy as np
+from itertools import product
 
 def load_json(path):
     with open(path, 'r') as file:
@@ -107,3 +108,47 @@ class Simulation:
         print(f"First Week with Lost Sales: {first_week_lost_sales}")
         print(f"Weeks with Lost Sales: {len(self.Table[self.Table['Lost Sales'] > 0])}")
         print(f"Alpha Service Level [%]: {self.ASL:.2f} %")
+
+def create_scenarios(config_path, output_path):
+    print("Creating scenarios...")
+    with open(config_path, 'r') as file:
+        config = json.load(file)
+
+    returns_levels = config['returns_level']
+    returns_delays = config['returns_delay']
+    marketing_effects = config['marketing_effects']
+    demand_patterns = config['demand_patterns']
+
+    combinations = list(product(
+        returns_levels.items(),
+        returns_delays.items(),
+        marketing_effects.items(),
+        demand_patterns.items()
+    ))
+
+    scenarios = {}
+    for combination in combinations:
+        (level_key, level_value), (delay_key, delay_value), (effect_key, effect_value), (pattern_key, pattern_value) = combination
+        
+        scenario_key = f"{level_key}_{delay_key}_{effect_key}_{pattern_key}"
+        scenarios[scenario_key] = {
+            "returns_level": level_value,
+            "returns_delay": delay_value,
+            "marketing_effects": effect_value,
+            "demand_patterns": pattern_value
+        }
+
+    with open(output_path, 'w') as file:
+        json.dump(scenarios, file, indent=4)
+    print(f"Successfully created {len(scenarios)} scenarios and saved them to {output_path}.")
+
+create_scenarios('jsons/configs.json', 'jsons/scenarios.json')
+
+'''
+Weniger Szenarien erlauben bessere Differenzierung der Szenarien. Wichtig für die Analyse der Ergebnisse.
+Muss man noch verschiedene Nachfragelevel vergleichen?
+Summe der demand patterns muss gleich sein für Vergleichbarkeit, noch testen !!!!!
+Frage: Welche Szenarien solten wir rauslassen?
+-> Extreme Szenarien begründen die Robuste Analyse am Besten
+-> In Extremen Szenarian ist die Worst Caste Analyse aber vielleicht zu konservativ?
+'''
