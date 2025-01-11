@@ -3,11 +3,18 @@ import pandas as pd
 import numpy as np
 from itertools import product
 
-def load_json(path):
+def load_json(path): #brauche ich das noch?
     with open(path, 'r') as file:
         dict = json.load(file)
         print(f"Successfully loaded json file from {path}")
         return dict
+    
+class Paths:
+    RESULTS = "results/results.json"
+    DUMMY = "data/dummy.json"
+    TWINS = "data/twins.json"
+    SCENARIOS = "configs/scenarios.json"
+    SETTINGS = "configs/settings.json"
     
 class Simulation:
     def __init__(self, Q: int, config: dict):
