@@ -117,25 +117,22 @@ def create_scenarios(config_path, output_path):
     returns_levels = config['returns_level']
     returns_delays = config['returns_delay']
     marketing_effects = config['marketing_effects']
-    demand_patterns = config['demand_patterns']
 
     combinations = list(product(
         returns_levels.items(),
         returns_delays.items(),
-        marketing_effects.items(),
-        demand_patterns.items()
+        marketing_effects.items()
     ))
 
     scenarios = {}
     for combination in combinations:
-        (level_key, level_value), (delay_key, delay_value), (effect_key, effect_value), (pattern_key, pattern_value) = combination
+        (level_key, level_value), (delay_key, delay_value), (effect_key, effect_value) = combination
         
-        scenario_key = f"{level_key}_{delay_key}_{effect_key}_{pattern_key}"
+        scenario_key = f"{level_key}_{delay_key}_{effect_key}"
         scenarios[scenario_key] = {
             "returns_level": level_value,
             "returns_delay": delay_value,
-            "marketing_effects": effect_value,
-            "demand_patterns": pattern_value
+            "marketing_effects": effect_value
         }
 
     with open(output_path, 'w') as file:

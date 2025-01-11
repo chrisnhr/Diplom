@@ -1,6 +1,6 @@
 # Diplom
 
-This repository serves as the repository for my diploma thesis.
+This repo contains the code belonging to my diploma thesis.
 
 ## Setup Instructions
 

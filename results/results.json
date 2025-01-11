@@ -1,0 +1,8 @@
+{
+    "9876543210" : {
+        "scenarios" : ["szenario_1", "szenario_2", "szenario_3"],
+        "moments" : [[100, 25], [90, 15], [100, 5]],
+        "Q_naive": 100,
+        "Q_DRO" : 90
+        }
+}
