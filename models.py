@@ -2,19 +2,13 @@ import json
 import pandas as pd
 import numpy as np
 from itertools import product
-
-def load_json(path): #brauche ich das noch?
-    with open(path, 'r') as file:
-        dict = json.load(file)
-        print(f"Successfully loaded json file from {path}")
-        return dict
     
 class Paths:
-    RESULTS = "results/results.json"
+    SETTINGS = "configs/settings.json"
+    SCENARIOS = "configs/scenarios.json"
     DUMMY = "data/dummy.json"
     TWINS = "data/twins.json"
-    SCENARIOS = "configs/scenarios.json"
-    SETTINGS = "configs/settings.json"
+    RESULTS = "results/results.json"
     
 class Simulation:
     def __init__(self, Q: int, config: dict):
@@ -116,9 +110,9 @@ class Simulation:
         print(f"Weeks with Lost Sales: {len(self.Table[self.Table['Lost Sales'] > 0])}")
         print(f"Alpha Service Level [%]: {self.ASL:.2f} %")
 
-def create_scenarios(config_path, output_path):
+def create_scenarios():
     print("Creating scenarios...")
-    with open(config_path, 'r') as file:
+    with open(Paths.SETTINGS, 'r') as file:
         config = json.load(file)
 
     returns_levels = config['returns_level']
@@ -142,11 +136,11 @@ def create_scenarios(config_path, output_path):
             "marketing_effects": effect_value
         }
 
-    with open(output_path, 'w') as file:
+    with open(Paths.SCENARIOS, 'w') as file:
         json.dump(scenarios, file, indent=4)
-    print(f"Successfully created {len(scenarios)} scenarios and saved them to {output_path}.")
+    print(f"Successfully created {len(scenarios)} scenarios and saved them to {Paths.SCENARIOS}.")
 
-create_scenarios('jsons/configs.json', 'jsons/scenarios.json')
+create_scenarios()
 
 '''
 Weniger Szenarien erlauben bessere Differenzierung der Szenarien. Wichtig für die Analyse der Ergebnisse.

@@ -1,9 +1,8 @@
 import os
 import subprocess
-import sys
 
 def create_folders():
-    folders = ['archive', 'plots', 'settings', 'queries', 'results']
+    folders = ['archive', 'plots', 'configs', 'data', 'results']
 
     for folder in folders:
         try:
