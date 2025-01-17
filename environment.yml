@@ -10,4 +10,5 @@ dependencies:
   - pandas
   - matplotlib
   - ipykernel
+  - arch-py
   - pip
