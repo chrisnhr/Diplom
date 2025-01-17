@@ -5,7 +5,7 @@
 --> twins_static (top 10 twins (distance))
 -- Query: datamart dynamic filtern nach den testarte
 --> twins_dynamic 
-CREATE OR REPLACE TABLE `brain-flash-dev.dagster_common.CN_testartikel_10_twins` AS
+CREATE OR REPLACE TABLE `brain-flash-dev.dagster_common.CN_twins_static` AS
 
 WITH
   cte_twins AS (
