@@ -2,16 +2,19 @@ CREATE OR REPLACE TABLE `brain-flash-dev.dagster_common.CN_twins_dynamic` AS
 
 WITH
   cte_filter AS (
-    SELECT static.ITEMOPTION_COMMUNICATIONKEY,
-      static.ITEM_COMMUNICATIONKEY
-    from `brain-flash-dev.psf_mart.datamart_static`  static
-    JOIN `brain-flash-dev.dagster_common.CN_testartikel_10_twins` twins
-    ON static.ITEM_COMMUNICATIONKEY = twins.twin_item_communicationkey
+    SELECT stat.ITEMOPTION_COMMUNICATIONKEY,
+      stat.ITEM_COMMUNICATIONKEY,
+      twins.item_communicationkey AS TEST_ITEM_COMMUNICATIONKEY
+    from `brain-flash-dev.psf_mart.datamart_static`  stat
+    JOIN `brain-flash-dev.dagster_common.CN_twins_static` twins
+    ON stat.ITEM_COMMUNICATIONKEY = twins.twin_item_communicationkey
   )
 
-SELECT dyn.CALENDAR_DATE,
-  SUM(dyn.ANSPRACHE) AS ANSPRACHE_ITEM,
-  cf.ITEM_COMMUNICATIONKEY
+SELECT 
+  MAX(cf.TEST_ITEM_COMMUNICATIONKEY) AS TEST_ITEM_COMMUNICATIONKEY, --should be the same throughout the group
+  dyn.CALENDAR_DATE,
+  SUM(dyn.ANSPRACHE) AS ANSPRACHE_TWIN,
+  cf.ITEM_COMMUNICATIONKEY AS TWIN_ITEM_COMMUNICATIONKEY
 FROM `brain-flash-dev.psf_mart.v_datamart_dynamic` dyn
 RIGHT JOIN 
  cte_filter cf

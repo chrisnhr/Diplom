@@ -5,6 +5,7 @@
 --> twins_static (top 10 twins (distance))
 -- Query: datamart dynamic filtern nach den testarte
 --> twins_dynamic 
+-- twins ggf filern auf gleiche marke
 CREATE OR REPLACE TABLE `brain-flash-dev.dagster_common.CN_twins_static` AS
 
 WITH
@@ -14,7 +15,7 @@ WITH
   FROM
     `brain-flash-dev.dagster_attributes.twins_lwg_fashion`
   WHERE
-    item_communicationkey IN (1611665929)
+    item_communicationkey IN (1611665929) --hier um weitere Testartikel ergänzen
   ),
   cte_first_ansprache AS (
   SELECT
