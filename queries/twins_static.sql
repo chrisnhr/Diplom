@@ -7,7 +7,6 @@
 --> twins_dynamic 
 -- twins ggf filern auf gleiche marke
 CREATE OR REPLACE TABLE `brain-flash-dev.dagster_common.CN_twins_static` AS
-
 WITH
   cte_twins AS (
   SELECT
@@ -15,7 +14,7 @@ WITH
   FROM
     `brain-flash-dev.dagster_attributes.twins_lwg_fashion`
   WHERE
-    item_communicationkey IN (1611665929) --hier um weitere Testartikel ergänzen
+    item_communicationkey IN (980275)
   ),
   cte_first_ansprache AS (
   SELECT
@@ -33,9 +32,10 @@ WITH
     io.ITEM_COMMUNICATIONKEY
   )
 SELECT
-  first_ansprache_test_artikel.FIRST_ANSPRACHE,
   t.*,
-  first_ansprache_twin.FIRST_ANSPRACHE AS FIRST_ANSPRACHE_TWIN
+  first_ansprache_test_artikel.FIRST_ANSPRACHE AS FIRST_ANSRPACHE_TEST,
+  first_ansprache_twin.FIRST_ANSPRACHE AS FIRST_ANSPRACHE_TWIN,
+--  DATE_DIFF(first_ansprache_test_artikel.FIRST_ANSPRACHE, first_ansprache_twin.FIRST_ANSPRACHE, DAY)
 FROM
   cte_twins t
 JOIN
@@ -47,7 +47,7 @@ JOIN
 ON
   first_ansprache_test_artikel.ITEM_COMMUNICATIONKEY = t.item_communicationkey
 WHERE
-  DATE_DIFF(first_ansprache_test_artikel.FIRST_ANSPRACHE, first_ansprache_twin.FIRST_ANSPRACHE, DAY) > 364
+  DATE_DIFF(CURRENT_DATE(), first_ansprache_test_artikel.FIRST_ANSPRACHE, DAY) > 364 AND
+  DATE_DIFF(first_ansprache_test_artikel.FIRST_ANSPRACHE, first_ansprache_twin.FIRST_ANSPRACHE, DAY) > 364 --DATE_DIFF(end_date, start_date, granularity)
 ORDER BY 
-  t.distance DESC
-LIMIT 10;
+  t.item_communicationkey, t.distance DESC
