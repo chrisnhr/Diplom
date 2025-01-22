@@ -8,7 +8,8 @@ WITH cte_twin_map AS
     JOIN `brain-flash-dev.psf_mart.datamart_static` stat
     ON twins.item_communicationkey = stat.ITEM_COMMUNICATIONKEY
   ),
-  cte_first_corso AS (
+  cte_first_corso AS
+  (
   SELECT
     itemoptions.ITEMOPTION_COMMUNICATIONKEY,
     MIN(CASE WHEN STOCKHOLDINGCOMPANYID = 2 THEN DATE(item.KNOWN_FROM_UTC, 'Europe/Berlin') END) AS FIRST_CORSO_DATE
@@ -21,7 +22,8 @@ WITH cte_twin_map AS
     ITEMOPTION_COMMUNICATIONKEY
   HAVING MIN(CASE WHEN STOCKHOLDINGCOMPANYID = 2 THEN DATE(item.KNOWN_FROM_UTC, 'Europe/Berlin') END) IS NOT NULL -- itemoption must have been sold to corso
   ),
-  cte_filter AS (
+  cte_filter AS
+  (
     SELECT *
     FROM cte_twin_map map
     JOIN cte_first_corso corso
@@ -35,3 +37,4 @@ USING(ITEMOPTION_COMMUNICATIONKEY)
 WHERE DATE_DIFF(CURRENT_DATE(), FIRST_ANSPRACHE_DATE, DAY) > 364
 
 -- we assume when one itemoption has been to corso the entire options belonging to the item were sold
+-- hätte noch die Spalten im neuen Datamart dynamic einschränken können
