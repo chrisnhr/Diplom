@@ -1,4 +1,6 @@
-CREATE OR REPLACE TABLE `brain-flash-dev.dagster_common.CN_datamart_dynamic_slice` AS
+CREATE OR REPLACE TABLE `brain-flash-dev.dagster_common.CN_datamart_dynamic_slice`
+PARTITION BY CALENDAR_DATE
+CLUSTER BY ITEM_COMMUNICATIONKEY AS
 WITH cte_twin_map AS
   (
     SELECT DISTINCT stat.ITEM_COMMUNICATIONKEY, stat.ITEMOPTION_COMMUNICATIONKEY
