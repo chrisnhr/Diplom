@@ -34,7 +34,7 @@ SELECT *
 FROM `brain-flash-dev.psf_mart_inputs.datamart_dynamic` dyn
 RIGHT JOIN cte_twin_map io_base
 USING(ITEMOPTION_COMMUNICATIONKEY)
-WHERE DATE_DIFF(CURRENT_DATE(), FIRST_ANSPRACHE_DATE, DAY) > 364
+WHERE DATE_DIFF(CURRENT_DATE(), FIRST_ANSPRACHE_DATE, DAY) > 364 --sollte ich das mal fix setzen, dass ich nicht immer neue Ergebnisse bekomme?
 
 -- we assume when one itemoption has been to corso the entire options belonging to the item were sold
--- hätte noch die Spalten im neuen Datamart dynamic einschränken können
+-- hätte noch die Spalten im neuen Datamart dynamic einschränken sollen für effizientere queries
