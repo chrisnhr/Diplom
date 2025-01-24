@@ -22,7 +22,7 @@ cte_grouped AS (
     SUM(ANSPRACHE) AS ANSPRACHE
   FROM cte_map_all
   JOIN `brain-flash-dev.dagster_common.CN_datamart_dynamic_slice` demand
-    ON cte_map_all.ITEM_COMMUNICATIONKEY = demand.ITEM_COMMUNICATIONKEY
+    ON cte_map_all.TWIN_ITEM_COMMUNICATIONKEY = demand.ITEM_COMMUNICATIONKEY
   GROUP BY cte_map_all.ITEM_COMMUNICATIONKEY, cte_map_all.TWIN_ITEM_COMMUNICATIONKEY, demand.CALENDAR_DATE
 ),
 cte_twin_counts AS (
@@ -37,7 +37,7 @@ SELECT
   cte_grouped.TWIN_ITEM_COMMUNICATIONKEY,
   cte_grouped.CALENDAR_DATE,
   cte_grouped.ANSPRACHE,
-  cte_twin_counts.twin_count
+  cte_twin_counts.twin_count -1 AS TWIN_COUNT -- weil Testartikel kein Twin ist
 FROM cte_grouped
 JOIN cte_twin_counts
   ON cte_grouped.ITEM_COMMUNICATIONKEY = cte_twin_counts.ITEM_COMMUNICATIONKEY
