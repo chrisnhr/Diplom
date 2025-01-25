@@ -38,7 +38,7 @@ WITH cte_test_first_date AS
       ITEM_COMMUNICATIONKEY,
       TWIN_ITEM_COMMUNICATIONKEY,
       distance,
-      ROW_NUMBER() OVER (PARTITION BY ITEM_COMMUNICATIONKEY ORDER BY ABS(distance) ASC) AS rank --Assuming the distance is symmetric
+      ROW_NUMBER() OVER (PARTITION BY ITEM_COMMUNICATIONKEY ORDER BY ABS(distance) ASC) AS rank --Assuming the distance is symmetric -- try order distance!!
       FROM cte_date_filter
   )
 SELECT
