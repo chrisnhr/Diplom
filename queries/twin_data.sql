@@ -12,7 +12,8 @@ cte_twin_data AS (
     twin.TWIN_ITEM_COMMUNICATIONKEY,
     dyn.CALENDAR_DATE,
     MIN(cte_first_ansprache.TEST_FIRST_ANSPRACHE) AS TEST_FIRST_ANSPRACHE,
-    SUM(dyn.ANSPRACHE) AS ANSPRACHE
+    SUM(dyn.ANSPRACHE) AS ANSPRACHE,
+    AVG(dyn.fraction_SOLDOUT) AS SOLDOUT_PERC,
   FROM `brain-flash-dev.dagster_common.CN_twin_selection` twin
     JOIN `brain-flash-dev.dagster_common.CN_datamart_dynamic_slice` dyn
     ON twin.TWIN_ITEM_COMMUNICATIONKEY = dyn.ITEM_COMMUNICATIONKEY
@@ -33,7 +34,8 @@ cte_all_date AS (
     test.ITEM_COMMUNICATIONKEY,
     test.TWIN_ITEM_COMMUNICATIONKEY,
     dyn.CALENDAR_DATE,
-    SUM(ANSPRACHE) AS ANSPRACHE
+    SUM(ANSPRACHE) AS ANSPRACHE,
+    AVG(fraction_SOLDOUT) AS SOLDOUT_PERC
   FROM cte_distinct_test_items test
   JOIN `brain-flash-dev.dagster_common.CN_datamart_dynamic_slice` dyn
     ON test.ITEM_COMMUNICATIONKEY = dyn.ITEM_COMMUNICATIONKEY
@@ -43,7 +45,8 @@ cte_all_date AS (
   ITEM_COMMUNICATIONKEY,
   TWIN_ITEM_COMMUNICATIONKEY,
   CALENDAR_DATE,
-  ANSPRACHE
+  ANSPRACHE,
+  SOLDOUT_PERC
   FROM cte_twin_data
 ),
 cte_twin_counts AS (
@@ -58,6 +61,7 @@ SELECT
   cte_all_date.TWIN_ITEM_COMMUNICATIONKEY,
   cte_all_date.CALENDAR_DATE,
   cte_all_date.ANSPRACHE,
+  cte_all_date.SOLDOUT_PERC,
   cte_twin_counts.twin_count -1 AS TWIN_COUNT -- weil Testartikel kein Twin ist
 FROM cte_all_date
 JOIN cte_twin_counts
