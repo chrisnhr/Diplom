@@ -1,0 +1,85 @@
+CREATE OR REPLACE TABLE
+  `brain-flash-dev.dagster_common.CN_datamart_dynamic_subset_ext`
+PARTITION BY
+  CALENDAR_DATE --
+CLUSTER BY
+  ITEM_COMMUNICATIONKEY AS
+WITH
+  cte_first_corso AS (
+  SELECT
+    itemoptions.ITEMOPTION_COMMUNICATIONKEY,
+    MIN(CASE
+        WHEN STOCKHOLDINGCOMPANYID = 2 THEN DATE(item.KNOWN_FROM_UTC, 'Europe/Berlin')
+    END
+      ) AS FIRST_CORSO_DATE
+  FROM
+    `brain-flash-dev.psf_mart_inputs.itemoption_inputs` itemoptions
+  LEFT JOIN
+    `brain-flash-dev.dagster_mercado.exasol_dim_item` AS item
+  USING
+    (ITEM_COMMUNICATIONKEY)
+  GROUP BY
+    ITEMOPTION_COMMUNICATIONKEY),
+  cte_returns AS (
+  SELECT
+    coin.ITEMOPTION_COMMUNICATIONKEY,
+    KPI_DATE_CET AS CALENDAR_DATE,
+    SUM(KPI_46_RETOUREN_STUECK) AS RETOUREN_STUECK
+  FROM
+    `brain-flash-dev.dagster_finance.exasol_kpi_nachfrageumsatz` AS coin
+  JOIN
+    `brain-flash-dev.dagster_mercado.exasol_dim_itemoption_latest` AS io
+  USING
+    (ITEMOPTION_COMMUNICATIONKEY)
+  JOIN
+    `brain-flash-dev.dagster_mercado.v_dim_item` AS i
+  ON
+    io.ITEM_COMMUNICATIONKEY = i.ITEM_COMMUNICATIONKEY
+    AND TIMESTAMP(KPI_DATE_CET) BETWEEN i.KNOWN_FROM_UTC
+    AND i.KNOWN_UNTIL_UTC
+  WHERE
+    STOCKHOLDINGCOMPANYID = 0
+    AND BUSINESSPROCESSOWNER_ID NOT IN (3,6)
+    AND KPI_46_RETOUREN_STUECK < 0
+  GROUP BY
+    ITEMOPTION_COMMUNICATIONKEY,
+    KPI_DATE_CET )
+SELECT
+  dyn.ITEM_COMMUNICATIONKEY,
+  dyn.CALENDAR_DATE,
+  SUM(dyn.STOCK) AS STOCK,
+  AVG(dyn.fraction_SOLDOUT) AS FRACTION_SOLDOUT,
+  AVG(dyn.RETAILPRICE) AS RETAILPRICE,
+  SUM(dyn.ANSPRACHE) AS ANSPRACHE,
+  MAX(dyn.LAST_ANSPRACHE_DATE) AS LAST_ANSPRACHE_DATE,
+  MIN(dyn.FIRST_ANSPRACHE_DATE) AS FIRST_ANSPRACHE_DATE,
+  AVG(dyn.AVG_ANSPRACHE_UNBIASED_AVLBL_OTTO_DE) AS AVG_ANSPRACHE_UNBIASED_AVLBL_OTTO_DE,
+  SUM(imputed.ANSPRACHE_MARKETING_IMPUTED) AS ANSPRACHE_MARKETING_IMPUTED,
+  AVG(imputed.RETAILPRICE_MARKETING_IMPUTED) AS RETAILPRICE_MARKETING_IMPUTED,
+  MIN(corso.FIRST_CORSO_DATE) AS FIRST_CORSO_DATE,
+  SUM(returns.RETOUREN_STUECK) AS RETOUREN_STUECK
+FROM
+  `brain-flash-dev.dagster_common.CN_datamart_dynamic_subset` dyn
+JOIN
+  `brain-flash-dev.psf_base.finance_marketing_days_imputed` imputed
+USING
+  (ITEMOPTION_COMMUNICATIONKEY,
+    CALENDAR_DATE)
+JOIN
+  cte_first_corso corso
+USING
+  (ITEMOPTION_COMMUNICATIONKEY)
+JOIN
+  cte_returns
+  RETURNS
+USING
+  (ITEMOPTION_COMMUNICATIONKEY,
+    CALENDAR_DATE)
+GROUP BY
+  ITEM_COMMUNICATIONKEY,
+  CALENDAR_DATE
+HAVING
+  DATE_DIFF(CURRENT_DATE('Europe/Berlin'), FIRST_ANSPRACHE_DATE, DAY) > 364
+
+--brauchen wir oben den LEFT JOIN??
+-- in hubble_psf finden wir die erklärungen zum marketing imputed --
