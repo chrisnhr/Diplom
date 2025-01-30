@@ -2,11 +2,11 @@ CREATE OR REPLACE TABLE `brain-flash-dev.dagster_common.CN_twin_selection` AS
 WITH cte_test_first_date AS
   (SELECT
     ITEM_COMMUNICATIONKEY,
-    AVG(AVG_ANSPRACHE_AVLBL_OTTO_DE_365) AVG_AVG_ANSPRACHE_AVLBL_OTTO_DE_365, -- in case there is more logic behind the averaging
+    AVG(AVG_ANSPRACHE_UNBIASED_AVLBL_OTTO_DE) AVG_ANSPRACHE_UNBIASED_AVLBL_OTTO, -- in case there is more logic behind the averaging
     MIN(FIRST_ANSPRACHE_DATE) MIN_FIRST_ANSPRACHE_ITEM--what if there are itemoptions added over time?
   FROM `brain-flash-dev.dagster_common.CN_datamart_dynamic_slice`
   GROUP BY ITEM_COMMUNICATIONKEY
-  ORDER BY AVG(AVG_ANSPRACHE_AVLBL_OTTO_DE_365) DESC
+  ORDER BY AVG(AVG_ANSPRACHE_UNBIASED_AVLBL_OTTO_DE) DESC
   LIMIT(50)),
   cte_twin_dates AS(--Assuming the twins are in the same cleaned_product_group
     SELECT 

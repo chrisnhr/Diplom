@@ -36,13 +36,13 @@ WITH cte_twin_map AS
     KPI_DATE_CET AS CALENDAR_DATE,
     SUM(KPI_46_RETOUREN_STUECK) AS RETOUREN_STUECK
   FROM
-    dagster_finance.exasol_kpi_nachfrageumsatz AS coin
+    `brain-flash-dev.dagster_finance.exasol_kpi_nachfrageumsatz` AS coin
   JOIN
-    dagster_mercado.exasol_dim_itemoption_latest AS io
+    `brain-flash-dev.dagster_mercado.exasol_dim_itemoption_latest` AS io
   ON
     coin.ITEMOPTION_COMMUNICATIONKEY = io.ITEMOPTION_COMMUNICATIONKEY
   JOIN
-    dagster_mercado.v_dim_item AS i
+    `brain-flash-dev.dagster_mercado.v_dim_item` AS i
   ON
     io.ITEM_COMMUNICATIONKEY = i.ITEM_COMMUNICATIONKEY
     AND TIMESTAMP(KPI_DATE_CET) BETWEEN i.KNOWN_FROM_UTC
@@ -61,7 +61,7 @@ SELECT
   dyn.*, --sollte auch mal eingeschränkt werden auf die wichtigsten
   io_base.ITEM_COMMUNICATIONKEY,
   cte_returns.RETOUREN_STUECK,
-  LAST_VALUE(ANSPRACHE_UNBIASED IGNORE NULLS) OVER (ORDER BY dyn.CALENDAR_DATE ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS ANSPRACHE_IMPUTED_FFILL -- ist noch nicht live
+  CASE WHEN ANSPRACHE_UNBIASED IS NULL THEN CAST(ROUND(AVG_ANSPRACHE_UNBIASED_AVLBL_OTTO_DE) AS INT64) ELSE ANSPRACHE_UNBIASED END AS ANSPRACHE_UNBIASED_FILL
 FROM `brain-flash-dev.psf_mart_inputs.datamart_dynamic` dyn
 RIGHT JOIN cte_twin_map io_base
 USING(ITEMOPTION_COMMUNICATIONKEY)

@@ -57,7 +57,7 @@ cte_twin_counts AS (
   GROUP BY ITEM_COMMUNICATIONKEY
 )
 SELECT
-  cte_all_date.ITEM_COMMUNICATIONKEY,
+  cte_all_date.ITEM_COMMUNICATIONKEY AS TEST_ITEM_COMMUNICATIONKEY, --müsste ich iwo früher schon durchziehen für verständlichkeit
   cte_all_date.TWIN_ITEM_COMMUNICATIONKEY,
   cte_all_date.CALENDAR_DATE,
   cte_all_date.ANSPRACHE,
