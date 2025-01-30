@@ -39,11 +39,22 @@ WITH
     AND i.KNOWN_UNTIL_UTC
   WHERE
     STOCKHOLDINGCOMPANYID = 0
-    AND BUSINESSPROCESSOWNER_ID NOT IN (3,6)
+    AND BUSINESSPROCESSOWNER_ID NOT IN (3,
+      6)
     AND KPI_46_RETOUREN_STUECK < 0
   GROUP BY
     ITEMOPTION_COMMUNICATIONKEY,
-    KPI_DATE_CET )
+    KPI_DATE_CET ),
+  cte_first_soldout AS (
+  SELECT
+    ITEM_COMMUNICATIONKEY,
+    MIN(CALENDAR_DATE) AS FIRST_SOLDOUT_DATE
+  FROM
+    `brain-flash-dev.dagster_common.CN_datamart_dynamic_subset`
+  WHERE
+    fraction_SOLDOUT > 0
+  GROUP BY
+    ITEM_COMMUNICATIONKEY )
 SELECT
   dyn.ITEM_COMMUNICATIONKEY,
   dyn.CALENDAR_DATE,
@@ -57,7 +68,8 @@ SELECT
   SUM(imputed.ANSPRACHE_MARKETING_IMPUTED) AS ANSPRACHE_MARKETING_IMPUTED,
   AVG(imputed.RETAILPRICE_MARKETING_IMPUTED) AS RETAILPRICE_MARKETING_IMPUTED,
   MIN(corso.FIRST_CORSO_DATE) AS FIRST_CORSO_DATE,
-  SUM(returns.RETOUREN_STUECK) AS RETOUREN_STUECK
+  SUM(returns.RETOUREN_STUECK) AS RETOUREN_STUECK,
+  MIN(soldout.FIRST_SOLDOUT_DATE) AS FIRST_SOLDOUT_DATE
 FROM
   `brain-flash-dev.dagster_common.CN_datamart_dynamic_subset` dyn
 JOIN
@@ -75,11 +87,14 @@ JOIN
 USING
   (ITEMOPTION_COMMUNICATIONKEY,
     CALENDAR_DATE)
+JOIN
+  cte_first_soldout soldout
+USING
+  (ITEM_COMMUNICATIONKEY)
 GROUP BY
   ITEM_COMMUNICATIONKEY,
   CALENDAR_DATE
 HAVING
   DATE_DIFF(CURRENT_DATE('Europe/Berlin'), FIRST_ANSPRACHE_DATE, DAY) > 364
-
---brauchen wir oben den LEFT JOIN??
--- in hubble_psf finden wir die erklärungen zum marketing imputed --
+--brauchen wir oben den LEFT JOIN ??
+--in hubble_psf finden wir die erklärungen zum marketing imputed
