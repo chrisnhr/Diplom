@@ -7,11 +7,6 @@ CLUSTER BY
 WITH
   cte_all_keys AS (
   SELECT
-    DISTINCT item_communicationkey AS ITEM_COMMUNICATIONKEY
-  FROM
-    `brain-flash-dev.dagster_attributes.twins_lwg_fashion`
-  UNION DISTINCT
-  SELECT
     DISTINCT twin_item_communicationkey AS ITEM_COMMUNICATIONKEY
   FROM
     `brain-flash-dev.dagster_attributes.twins_lwg_fashion` ),
