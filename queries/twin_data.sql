@@ -1,4 +1,4 @@
-CREATE OR REPLACE TABLE `brain-flash-dev.dagster_common.CN_twin_data_2` AS
+CREATE OR REPLACE TABLE `brain-flash-dev.dagster_common.CN_twin_data` AS
 
 WITH cte_test_pairing AS (
   SELECT DISTINCT
