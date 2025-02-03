@@ -45,14 +45,34 @@ WITH
   GROUP BY
     ITEMOPTION_COMMUNICATIONKEY,
     KPI_DATE_CET ),
+  cte_soldout_fractions AS (
+  SELECT
+    ITEM_COMMUNICATIONKEY,
+    CALENDAR_DATE,
+    AVG(fraction_SOLDOUT) AS FRACTION_SOLDOUT
+  FROM
+    `brain-flash-dev.dagster_common.CN_datamart_dynamic_subset`
+  GROUP BY
+    ITEM_COMMUNICATIONKEY,
+    CALENDAR_DATE ),
   cte_first_soldout AS (
   SELECT
     ITEM_COMMUNICATIONKEY,
     MIN(CALENDAR_DATE) AS FIRST_SOLDOUT_DATE
   FROM
-    `brain-flash-dev.dagster_common.CN_datamart_dynamic_subset`
+    cte_soldout_fractions
   WHERE
-    fraction_SOLDOUT > 0
+    FRACTION_SOLDOUT > 0
+  GROUP BY
+    ITEM_COMMUNICATIONKEY ),
+  cte_20_soldout AS (
+  SELECT
+    ITEM_COMMUNICATIONKEY,
+    MIN(CALENDAR_DATE) AS FIRST_SOLDOUT20_DATE
+  FROM
+    cte_soldout_fractions
+  WHERE
+    FRACTION_SOLDOUT >= 0.2
   GROUP BY
     ITEM_COMMUNICATIONKEY )
 SELECT
@@ -69,7 +89,8 @@ SELECT
   AVG(imputed.RETAILPRICE_MARKETING_IMPUTED) AS RETAILPRICE_MARKETING_IMPUTED,
   MIN(corso.FIRST_CORSO_DATE) AS FIRST_CORSO_DATE,
   SUM(return.RETOUREN_STUECK) AS RETOUREN_STUECK,
-  MIN(soldout.FIRST_SOLDOUT_DATE) AS FIRST_SOLDOUT_DATE
+  MIN(soldout.FIRST_SOLDOUT_DATE) AS FIRST_SOLDOUT_DATE,
+  MIN(soldout20.FIRST_SOLDOUT20_DATE) AS FIRST_SOLDOUT20_DATE
 FROM
   `brain-flash-dev.dagster_common.CN_datamart_dynamic_subset` dyn
 LEFT JOIN
@@ -90,10 +111,14 @@ LEFT JOIN
   cte_first_soldout soldout
 USING
   (ITEM_COMMUNICATIONKEY)
+LEFT JOIN
+  cte_20_soldout soldout20
+USING
+  (ITEM_COMMUNICATIONKEY)
 GROUP BY
   ITEM_COMMUNICATIONKEY,
   CALENDAR_DATE
 HAVING
   DATE_DIFF(CURRENT_DATE('Europe/Berlin'), FIRST_ANSPRACHE_DATE, DAY) > 364
---brauchen wir oben den LEFT JOIN ??
---in hubble_psf finden wir die erklärungen zum marketing imputed
+  --brauchen wir oben den LEFT JOIN ??
+  --in hubble_psf finden wir die erklärungen zum marketing imputed

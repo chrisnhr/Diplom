@@ -47,11 +47,11 @@ WITH
     cte_twin_clean twin
   USING
     (ITEM_COMMUNICATIONKEY)
-  JOIN
+  LEFT JOIN
     cte_dates test_dates
   USING
     (ITEM_COMMUNICATIONKEY)
-  JOIN
+  LEFT JOIN
     cte_dates twin_dates
   ON
     twin.twin_item_communicationkey = twin_dates.ITEM_COMMUNICATIONKEY
