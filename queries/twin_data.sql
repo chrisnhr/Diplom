@@ -13,7 +13,8 @@ cte_twin_data AS (
     dyn.CALENDAR_DATE,
     dyn.ANSPRACHE,
     dyn.ANSPRACHE_MARKETING_IMPUTED,
-    dyn.FRACTION_SOLDOUT
+    dyn.FRACTION_SOLDOUT,
+    dyn.FIRST_ANSPRACHE_DATE
   FROM `brain-flash-dev.dagster_common.CN_item_selections` selection
   JOIN `brain-flash-dev.dagster_common.CN_datamart_dynamic_subset_ext` dyn
     ON selection.TWIN_ITEM_COMMUNICATIONKEY = dyn.ITEM_COMMUNICATIONKEY
@@ -25,7 +26,8 @@ cte_twin_data AS (
     dyn.CALENDAR_DATE,
     dyn.ANSPRACHE,
     dyn.ANSPRACHE_MARKETING_IMPUTED,
-    dyn.FRACTION_SOLDOUT
+    dyn.FRACTION_SOLDOUT,
+    dyn.FIRST_ANSPRACHE_DATE
   FROM cte_test_pairing selection
   JOIN `brain-flash-dev.dagster_common.CN_datamart_dynamic_subset_ext` dyn
     ON selection.TWIN_ITEM_COMMUNICATIONKEY = dyn.ITEM_COMMUNICATIONKEY
@@ -44,6 +46,7 @@ SELECT
   ANSPRACHE,
   ANSPRACHE_MARKETING_IMPUTED,
   FRACTION_SOLDOUT,
+  FIRST_ANSPRACHE_DATE,
   TWIN_COUNT -1 AS TWIN_COUNT
 FROM
   cte_twin_data twin_data
