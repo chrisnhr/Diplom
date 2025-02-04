@@ -55,7 +55,7 @@ WITH
     twin.twin_item_communicationkey = twin_dates.ITEM_COMMUNICATIONKEY
   WHERE
     DATE_DIFF(test_dates.FIRST_ANSPRACHE_DATE, twin_dates.FIRST_ANSPRACHE_DATE, DAY) > 364
-    AND DATE_DIFF (test_dates.FIRST_ANSPRACHE_DATE, twin_dates.LAST_ANSPRACHE_DATE, DAY) < 364 ),
+    AND DATE_DIFF (test_dates.FIRST_ANSPRACHE_DATE, twin_dates.LAST_ANSPRACHE_DATE, DAY) < 120),
   cte_twin_ranks AS (
   SELECT
     TEST_ITEM_COMMUNICATIONKEY,
