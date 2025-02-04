@@ -1,24 +1,28 @@
-CREATE OR REPLACE TABLE `brain-flash-dev.dagster_common.CN_twin_data` AS
-
-WITH cte_test_pairing AS (
-  SELECT DISTINCT
-    TEST_ITEM_COMMUNICATIONKEY AS TEST_ITEM_COMMUNICATIONKEY,
+CREATE OR REPLACE TABLE
+  `brain-flash-dev.dagster_common.CN_twin_data` AS
+WITH
+  cte_test_pairing AS (
+  SELECT
+    DISTINCT TEST_ITEM_COMMUNICATIONKEY AS TEST_ITEM_COMMUNICATIONKEY,
     TEST_ITEM_COMMUNICATIONKEY AS TWIN_ITEM_COMMUNICATIONKEY
-  FROM `brain-flash-dev.dagster_common.CN_item_selections`
-),
-cte_twin_data AS (
-  SELECT 
+  FROM
+    `brain-flash-dev.dagster_common.CN_item_selections` ),
+  cte_twin_data AS (
+  SELECT
     selection.TEST_ITEM_COMMUNICATIONKEY,
     selection.TWIN_ITEM_COMMUNICATIONKEY,
     dyn.CALENDAR_DATE,
     dyn.ANSPRACHE,
     dyn.ANSPRACHE_MARKETING_IMPUTED,
     dyn.FRACTION_SOLDOUT,
-    dyn.FIRST_ANSPRACHE_DATE
-  FROM `brain-flash-dev.dagster_common.CN_item_selections` selection
-  JOIN `brain-flash-dev.dagster_common.CN_datamart_dynamic_subset_ext` dyn
-    ON selection.TWIN_ITEM_COMMUNICATIONKEY = dyn.ITEM_COMMUNICATIONKEY
-  WHERE dyn.CALENDAR_DATE < selection.TEST_FIRST_ANSPRACHE
+  FROM
+    `brain-flash-dev.dagster_common.CN_item_selections` selection
+  JOIN
+    `brain-flash-dev.dagster_common.CN_datamart_dynamic_subset_ext` dyn
+  ON
+    selection.TWIN_ITEM_COMMUNICATIONKEY = dyn.ITEM_COMMUNICATIONKEY
+  WHERE
+    dyn.CALENDAR_DATE < selection.TEST_FIRST_ANSPRACHE
   UNION ALL
   SELECT
     selection.TEST_ITEM_COMMUNICATIONKEY,
@@ -27,18 +31,27 @@ cte_twin_data AS (
     dyn.ANSPRACHE,
     dyn.ANSPRACHE_MARKETING_IMPUTED,
     dyn.FRACTION_SOLDOUT,
-    dyn.FIRST_ANSPRACHE_DATE
-  FROM cte_test_pairing selection
-  JOIN `brain-flash-dev.dagster_common.CN_datamart_dynamic_subset_ext` dyn
-    ON selection.TWIN_ITEM_COMMUNICATIONKEY = dyn.ITEM_COMMUNICATIONKEY
-),
-cte_twin_counts AS (
+  FROM
+    cte_test_pairing selection
+  JOIN
+    `brain-flash-dev.dagster_common.CN_datamart_dynamic_subset_ext` dyn
+  ON
+    selection.TWIN_ITEM_COMMUNICATIONKEY = dyn.ITEM_COMMUNICATIONKEY ),
+  cte_twin_counts AS (
   SELECT
-  TEST_ITEM_COMMUNICATIONKEY,
-  COUNT(DISTINCT TWIN_ITEM_COMMUNICATIONKEY) AS TWIN_COUNT
-  FROM cte_twin_data
-  GROUP BY TEST_ITEM_COMMUNICATIONKEY
-)
+    TEST_ITEM_COMMUNICATIONKEY,
+    COUNT(DISTINCT TWIN_ITEM_COMMUNICATIONKEY) AS TWIN_COUNT
+  FROM
+    cte_twin_data
+  GROUP BY
+    TEST_ITEM_COMMUNICATIONKEY ),
+  cte_firstlast AS (
+    SELECT  DISTINCT ITEM_COMMUNICATIONKEY AS TEST_ITEM_COMMUNICATIONKEY,
+    MIN(FIRST_ANSPRACHE_DATE) FIRST_ANSPRACHE_DATE,
+    MAX(LAST_ANSPRACHE_DATE) LAST_ANSPRACHE_DATE
+    FROM `brain-flash-dev.dagster_common.CN_datamart_dynamic_subset_ext`
+    GROUP BY ITEM_COMMUNICATIONKEY
+  )
 SELECT
   TEST_ITEM_COMMUNICATIONKEY,
   TWIN_ITEM_COMMUNICATIONKEY,
@@ -46,11 +59,21 @@ SELECT
   ANSPRACHE,
   ANSPRACHE_MARKETING_IMPUTED,
   FRACTION_SOLDOUT,
-  FIRST_ANSPRACHE_DATE,
-  TWIN_COUNT -1 AS TWIN_COUNT
+  TWIN_COUNT -1 AS TWIN_COUNT,
+  firstlast.FIRST_ANSPRACHE_DATE,
+  firstlast.LAST_ANSPRACHE_DATE
 FROM
   cte_twin_data twin_data
 JOIN
   cte_twin_counts twin_counts
-USING(TEST_ITEM_COMMUNICATIONKEY)
-ORDER BY TWIN_COUNT DESC, TEST_ITEM_COMMUNICATIONKEY, TWIN_ITEM_COMMUNICATIONKEY, CALENDAR_DATE
+USING
+  (TEST_ITEM_COMMUNICATIONKEY)
+LEFT JOIN
+  cte_firstlast firstlast
+USING
+  (TEST_ITEM_COMMUNICATIONKEY)
+ORDER BY
+  TWIN_COUNT DESC,
+  TEST_ITEM_COMMUNICATIONKEY,
+  TWIN_ITEM_COMMUNICATIONKEY,
+  CALENDAR_DATE

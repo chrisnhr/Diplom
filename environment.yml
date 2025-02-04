@@ -11,4 +11,5 @@ dependencies:
   - matplotlib
   - ipykernel
   - arch-py
+  - google-cloud-bigquery
   - pip
