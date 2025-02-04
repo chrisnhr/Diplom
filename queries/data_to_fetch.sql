@@ -2,12 +2,15 @@ CREATE OR REPLACE TABLE `brain-flash-dev.dagster_common.CN_data_to_fetch` AS
 WITH
   cte_select_n_items AS (
   SELECT
-    DISTINCT TEST_ITEM_COMMUNICATIONKEY
+    TEST_ITEM_COMMUNICATIONKEY,
+    MAX(NA_COUNT/TWIN_COUNT) AS NA_QUOTA
   FROM
-    `brain-flash-dev.dagster_common.CN_twin_data`
+    `brain-flash-dev.dagster_common.CN_twin_data` data
   WHERE TWIN_COUNT >= 4
-  LIMIT
-    (100) ),
+  GROUP BY TEST_ITEM_COMMUNICATIONKEY
+  ORDER BY NA_QUOTA ASC, MIN(TWIN_COUNT) DESC
+  LIMIT(100)
+   ),
   cte_top_data AS(
     SELECT *
     FROM cte_select_n_items
@@ -42,3 +45,4 @@ FROM
   cte_twin_window
 
   --die eingrenzungen der Perioden sind noch nicht ganz fertig, aber ich hab grad kein Bock mehr auf das Rumgefummel
+  -- Grenzen sollen bei 364 Tagen liegen wegen der Teilbarkeit durch 7
