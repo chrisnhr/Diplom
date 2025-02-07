@@ -140,6 +140,77 @@ def create_scenarios():
         json.dump(scenarios, file, indent=4)
     print(f"Successfully created {len(scenarios)} scenarios and saved them to {Paths.SCENARIOS}.")
 
+class Sampling:
+    def __init__(self, key: str, synthetic: bool, window_size: int = 7, sample_size: int = 5000):
+
+        self.window_size = window_size
+        self.sample_size = sample_size
+        self.key = key
+        self.paths = Paths()
+        self.moments = {}
+
+        filename = self.paths.DUMMY if synthetic else self.paths.TWINS
+        with open(filename, 'r') as json_file:
+            time_series = json.load(json_file)[self.key]["Twin_TS"]
+            self.time_series = [np.array(ts) for ts in time_series]
+
+        with open(self.paths.RESULTS, 'r') as json_file:
+            self.dict = json.load(json_file)
+
+        self.config = {
+            "returns_level": 0,
+            "returns_delay": [0],
+            "marketing_effects": [1]*len(self.time_series[0])
+            }
+        self.horizon = len(self.time_series[0])
+        if not all(len(ts) == self.horizon for ts in self.time_series):
+            raise ValueError("All time series must have the same length.")
+        if not isinstance(window_size, int) or window_size <= 0 or window_size % 2 == 0:
+            raise ValueError("Window size must be a positive odd integer.")
+        if not isinstance(sample_size, int) or sample_size <= 0:
+            raise ValueError("Sample size must be a positive integer.")
+        
+    def bootstrap_joint_distribution(self, scenario: str = "default", mode: object ="random"):
+        
+        if scenario == "default":
+            config = self.config
+        else:
+            with open(self.paths.SCENARIOS, 'r') as json_file:
+                config = json.load(json_file)[scenario]
+
+        bootstrap_samples = []
+        boosted_demand = []
+        
+        for ts in self.time_series:
+            boosted_demand.append(ts * config["marketing_effects"])
+
+        # Generate bootstrap samples
+        for _ in range(self.sample_size):
+            sample = []
+            for t in range(self.horizon):
+                # Determine the indices for the sliding window
+                start = max(0, t - self.window_size // 2)
+                end = min(self.horizon, t + self.window_size // 2 + 1)
+                #print(f"start: {start} to end: {end-1}")
+                # Aggregate values across all time series within the sliding window
+                if mode == "random":
+                    window_values = np.concatenate([ts[start:end] for ts in boosted_demand])
+                    sample.append(np.random.choice(window_values))
+            
+            bootstrap_samples.append(np.sum(sample)) #muss ich hier mean oder sum nehmen?
+
+        bootstrap_samples = np.array(bootstrap_samples)
+
+        # Calculate the mean and variance of the bootstrap samples
+        mean = np.mean(bootstrap_samples)
+        var = np.var(bootstrap_samples, ddof=1) #apply bessel correction bc we are estimating the population variance from a sample
+        self.dict[self.key]["moments"][scenario] = [mean, var]
+        return bootstrap_samples #warum war hier flatten?
+    
+    def save_results(self):
+        with open(self.paths.RESULTS, 'w') as json_file:
+            json.dump(self.dict, json_file, indent=4)
+            
 create_scenarios()
 
 '''

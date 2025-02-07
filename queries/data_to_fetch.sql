@@ -44,5 +44,7 @@ SELECT *,
 FROM
   cte_twin_window
 
+ORDER BY TEST_ITEM_COMMUNICATIONKEY, TWIN_ITEM_COMMUNICATIONKEY, CALENDAR_DATE
+
   --die eingrenzungen der Perioden sind noch nicht ganz fertig, aber ich hab grad kein Bock mehr auf das Rumgefummel
   -- Grenzen sollen bei 364 Tagen liegen wegen der Teilbarkeit durch 7
