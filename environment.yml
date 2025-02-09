@@ -2,14 +2,12 @@ name: diplom
 channels:
   - defaults
   - conda-forge
-  - gurobi
 dependencies:
   - python=3.9
-  - gurobi
   - numpy
   - pandas
   - matplotlib
   - ipykernel
-  - arch-py
   - google-cloud-bigquery
+  - pyarrow=14.0.1  # Ensure compatibility with BigQuery
   - pip
