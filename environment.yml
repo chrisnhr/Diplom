@@ -10,4 +10,5 @@ dependencies:
   - ipykernel
   - google-cloud-bigquery
   - pyarrow=14.0.1  # Ensure compatibility with BigQuery
+  - tqdm
   - pip
