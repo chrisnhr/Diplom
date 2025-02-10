@@ -7,3 +7,6 @@ Zeitreihe mit Test vs Twins
 Zeitreihe mt Stockout verhalten
 Zeitreihe mit und ohne Marketing
 -> Ausführlich Beschreiben
+
+Bootstrap:
+verlauf der Windos für verschiedene B werte
