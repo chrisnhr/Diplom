@@ -10,3 +10,5 @@ Zeitreihe mit und ohne Marketing
 
 Bootstrap:
 verlauf der Windos für verschiedene B werte
+optimierungskurve der parametersettings
+dazu standard bootstrap als benchmark
