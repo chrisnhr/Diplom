@@ -10,6 +10,8 @@ class InputData:
     project_id = "brain-flash-dev"
     dataset_id = "dagster_common"
     data_path = "data"
+    TestData = {}  # Store TestData as a class attribute
+    TwinData = {}  # Store TwinData as a class attribute
 
     def __init__(self, file_name: str = "twins_100"):
         """Loads data from a CSV file and initializes unique communication keys."""
@@ -17,6 +19,14 @@ class InputData:
 
         self.TestData = {key : self.get_test_item(key) for key in self.data["TEST_ITEM_COMMUNICATIONKEY"].unique()}
         self.TwinData = {key : self.get_twin_item(key, 10) for key in self.data["TEST_ITEM_COMMUNICATIONKEY"].unique()}
+
+    @classmethod
+    def load_data(cls, file_name: str = "twins_100"):
+        """Loads data from a CSV file and initializes class-level TestData and TwinData."""
+        cls.data = pd.read_csv(f"{cls.data_path}/{file_name}.csv")
+
+        cls.TestData = {key: cls.get_test_item(cls, key) for key in cls.data["TEST_ITEM_COMMUNICATIONKEY"].unique()}
+        cls.TwinData = {key: cls.get_twin_item(cls, key, 10) for key in cls.data["TEST_ITEM_COMMUNICATIONKEY"].unique()}
     
     @classmethod
     def download_from_bq(cls, table_id: str = "CN_data_to_fetch", filename: str = "twins_100"):
@@ -81,7 +91,7 @@ class Resampling:
         return pd.Series(np.sum(sampled_observations, axis=1), name="Bootstrap_Sums")
 
     @classmethod
-    def lb_bootstrap(cls, data: pd.DataFrame, window_size: int, b: int) -> pd.Series:
+    def lb_bootstrap(cls, data: pd.DataFrame, window_size: int, block_size: int) -> pd.Series:
         """
         Performs the Local Block Bootstrap (LBB) method from Paparoditis and Politis (2002) 
         in a vectorized manner with NumPy, adapted to work on multiple sample series.
@@ -98,7 +108,7 @@ class Resampling:
         N, col = data.shape
 
         # Number of blocks
-        M = int(np.ceil(N / b))
+        M = int(np.ceil(N / block_size))
 
         # Precompute column choices for each bootstrap sample
         col_choices = np.random.randint(col, size=(cls.num_samples, M))  # Shape: (num_samples, M)
@@ -109,15 +119,15 @@ class Resampling:
         # J_2m = np.minimum(np.arange(M) * b + 0.5*window_size, N - b + 1)-1  # Shape: (M,)
 
         #Test: modified version des Papers -> robustes Grenzverhalten
-        J_1m = np.maximum(0, np.minimum(np.arange(M) * b - window_size/2, N-b - window_size/2)) # Shape: (M,)
-        J_2m = np.maximum(0, np.minimum(np.arange(M) * b + window_size/2, N-b))                 # Shape: (M,)
+        J_1m = np.maximum(0, np.minimum(np.arange(M) * block_size - window_size/2, N-block_size - window_size/2)) # Shape: (M,)
+        J_2m = np.maximum(0, np.minimum(np.arange(M) * block_size + window_size/2, N-block_size))                 # Shape: (M,)
 
 
         # Generate block starting indices for each block m
         I_m = np.random.randint(J_1m, J_2m+1, size=(cls.num_samples, M))  # Shape: (num_samples, M), +1 to account for open interval
 
         # Generate row index ranges for each block (vectorized)
-        row_ranges = I_m[:, :, None] + np.arange(b)  # Shape: (num_samples, M, b)
+        row_ranges = I_m[:, :, None] + np.arange(block_size)  # Shape: (num_samples, M, b)
 
         # Extract sampled blocks from data using NumPy advanced indexing
         sampled_blocks = data.values[row_ranges, col_choices[:, :, None]]  # Shape: (num_samples, M, b)
@@ -131,31 +141,25 @@ class Resampling:
 class Metrics:
 
     @staticmethod
-    def mse(test_item_series: pd.Series, bootstrap_samples: pd.Series) -> float:
+    def rmse(test_item_series: pd.Series, bootstrap_samples: pd.Series) -> float:
         """
-        Computes the Mean Squared Error (MSE) as decomposed into bias^2 and variance.
-        
-        Parameters:
-        - test_item_series: The ground truth value for comparison (assumed seasonal demand sum).
-        - bootstrap_samples: A Pandas Series of bootstrap sample estimates.
-        
-        Returns:
-        - MSE value as a float.
+        Wie kann ich denn den RMSE normieren für die Zeitreihen?
+        -> nehme ich da die Testreihe oder die Twins zum normieren?
         """
-        season_demand = np.sum(test_item_series, axis=0)
+        season_demand = np.sum(test_item_series, axis=0).values
         bias = (np.mean(bootstrap_samples) - season_demand) ** 2
         
         variance = np.var(bootstrap_samples, ddof=1)  # Using sample variance (ddof=1 for unbiased estimator)
         
         mse = bias + variance
-        return mse
+        return np.sqrt(mse).item()
     
     @staticmethod
     def mape(test_item_series: pd.Series, bootstrap_samples: pd.Series) -> float:
         """
         Computes the Mean Absolute Percentage Error (MAPE) as a percentage value.
         """
-        season_demand = np.sum(test_item_series, axis=0)
+        season_demand = np.sum(test_item_series, axis=0).values
         return np.mean(np.abs(bootstrap_samples - season_demand) / season_demand) * 100
 
     @staticmethod
@@ -163,7 +167,7 @@ class Metrics:
         """
         Computes the Mean Absolute Error (MAE).
         """
-        season_demand = np.sum(test_item_series, axis=0)
+        season_demand = np.sum(test_item_series, axis=0).values
         return np.mean(np.abs(bootstrap_samples - season_demand))
 
     @staticmethod
@@ -185,3 +189,7 @@ class Metrics:
         dist2_sorted = np.sort(dist2)
 
         return np.power(np.sum(np.abs(dist1_sorted - dist2_sorted) ** p) / len(dist1), 1 / p)
+
+### will be run on overy import    
+InputData.load_data()
+print("succes")
