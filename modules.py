@@ -5,6 +5,8 @@ import pandas as pd
 from google.cloud import bigquery as bq
 from tqdm.notebook import tqdm
 from joblib import Parallel, delayed
+import os
+import warnings
 
 class InputData:
     project_id = "brain-flash-dev"
@@ -189,6 +191,81 @@ class Metrics:
         dist2_sorted = np.sort(dist2)
 
         return np.power(np.sum(np.abs(dist1_sorted - dist2_sorted) ** p) / len(dist1), 1 / p)
+    
+class GridEvaluation:
+
+    output_file = "results/grid_results.csv"
+    max_window_size = 60
+    max_block_size = 30
+    max_twin_number = 10
+    batch_size = 5
+
+    @staticmethod
+    def evaluate_lbb(test_item_key, b, w):
+
+        twin_lbb = Resampling.lb_bootstrap(InputData.TwinData[test_item_key], window_size = w, block_size = b)
+        test_lbb = Resampling.lb_bootstrap(InputData.TestData[test_item_key], window_size = w, block_size = b)
+
+        summary = {
+            "TEST_ITEM_COMMUNICATIONKEY": test_item_key,
+            "BLOCK_SIZE": b,
+            "WINDOW_SIZE": w,
+            "TWIN_NUMBER": InputData.TwinData[test_item_key].shape[1],
+            "MEAN_SAMPLE": np.mean(twin_lbb),
+            "MEAN_TEST": np.mean(InputData.TestData[test_item_key].sum(axis=0)),
+            "BIAS": np.mean(twin_lbb)-np.mean(InputData.TestData[test_item_key].sum(axis=0)),
+            "VARIANCE": np.var(twin_lbb, ddof=1),
+            "RMSE": np.sqrt(Metrics.rmse(InputData.TestData[test_item_key], twin_lbb)),
+            "MAPE": Metrics.mape(InputData.TestData[test_item_key], twin_lbb),
+            "MAE": Metrics.mae(InputData.TestData[test_item_key], twin_lbb),
+            "WASSERSTEIN": Metrics.discrete_wasserstein(test_lbb, twin_lbb),
+        }
+        return summary
+    
+    @staticmethod
+    def evaluate_idd(test_item_key):
+        
+        twin_idd = Resampling.iid_bootstrap(InputData.TwinData[test_item_key])
+        test_idd = Resampling.iid_bootstrap(InputData.TestData[test_item_key])
+
+        summary = {
+            "TEST_ITEM_COMMUNICATIONKEY": test_item_key,
+            "BLOCK_SIZE": 1,
+            "WINDOW_SIZE": 1,
+            "TWIN_NUMBER": InputData.TwinData[test_item_key].shape[1],
+            "MEAN_SAMPLE": np.mean(twin_idd),
+            "MEAN_TEST": np.mean(InputData.TestData[test_item_key].sum(axis=0)),
+            "BIAS": np.mean(twin_idd)-np.mean(InputData.TestData[test_item_key].sum(axis=0)),
+            "VARIANCE": np.var(twin_idd, ddof=1),
+            "RMSE": Metrics.rmse(InputData.TestData[test_item_key], twin_idd),
+            "MAPE": Metrics.mape(InputData.TestData[test_item_key], twin_idd),
+            "MAE": Metrics.mae(InputData.TestData[test_item_key], twin_idd),
+            "WASSERSTEIN": Metrics.discrete_wasserstein(test_idd, twin_idd),
+        }
+        return summary
+    
+    @classmethod
+    def write_results(cls, results):
+        df = pd.DataFrame(results)
+        df.to_csv(cls.output_file, mode="a", header=not os.path.exists(cls.output_file), index=False)
+    
+    @classmethod
+    def run(cls, keys):
+
+        batches = [keys[i:i + cls.batch_size] for i in range(0, len(keys), cls.batch_size)]
+        grid = [(w, b, cls.max_twin_number) for b in range(1, cls.max_block_size + 1, 3) for w in range(1, cls.max_window_size + 1, 4)]
+
+        if os.path.exists(GridEvaluation.output_file):
+            warnings.warn(f"Warning: The file '{GridEvaluation.output_file}' already exists. Data will be appended.", UserWarning)
+
+        for batch in tqdm(batches, desc="Batch processing and streaming"):
+            
+            #hier wir parallelisiert sein Vater auf meinen 8 Kirschkernen
+            cls.write_results(Parallel(n_jobs=-1)(
+            delayed(cls.evaluate_lbb)(test_item_key, b, w) 
+            for w, b, _ in grid 
+            for test_item_key in batch
+        ))
 
 ### will be run on overy import    
 InputData.load_data()

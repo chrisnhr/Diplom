@@ -1,3 +1,6 @@
+SAVE ALL DATA FOR PLOTS SEPERATELY TO ALLOW REPRODUCIBILITY IN CASE OF STYLE CHANGES ETC!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
 So viel wies geht in schwarz, grau, weiß
 
 Format: svg oder pdf
