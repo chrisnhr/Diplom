@@ -231,7 +231,7 @@ class GridEvaluation:
         summary = {
             "TEST_ITEM_COMMUNICATIONKEY": test_item_key,
             "BLOCK_SIZE": 1,
-            "WINDOW_SIZE": 1,
+            "WINDOW_SIZE": 0,
             "TWIN_NUMBER": InputData.TwinData[test_item_key].shape[1],
             "MEAN_SAMPLE": np.mean(twin_idd),
             "MEAN_TEST": np.mean(InputData.TestData[test_item_key].sum(axis=0)),
@@ -260,13 +260,15 @@ class GridEvaluation:
 
         for batch in tqdm(batches, desc="Batch processing and streaming"):
             
-            #hier wir parallelisiert sein Vater auf meinen 8 Kirschkernen
+            #hier wir parallelisiert sein Vater auf allen meinen 8 Kirschkernen
             cls.write_results(Parallel(n_jobs=-1)(
             delayed(cls.evaluate_lbb)(test_item_key, b, w) 
             for w, b, _ in grid 
-            for test_item_key in batch
-        ))
+            for test_item_key in batch))
+
+            cls.write_results(Parallel(n_jobs=-1)(
+            delayed(cls.evaluate_idd)(test_item_key)
+            for test_item_key in batch))
 
 ### will be run on overy import    
 InputData.load_data()
-print("succes")
