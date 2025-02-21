@@ -71,7 +71,7 @@ class InputData:
         return df
 
 class Resampling:
-    num_samples = 500 # maintained on class level to ensure comparability between experiments
+    num_samples = 5000 # maintained on class level to ensure comparability between experiments
 
     @classmethod
     def iid_bootstrap(cls, data: pd.DataFrame) -> pd.Series:
