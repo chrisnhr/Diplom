@@ -163,6 +163,14 @@ class Metrics:
         """
         season_demand = np.sum(test_item_series, axis=0).values
         return np.mean(np.abs(bootstrap_samples - season_demand) / season_demand) * 100
+    
+    @staticmethod
+    def mpe(test_item_series: pd.Series, bootstrap_samples: pd.Series) -> float:
+        """
+        Computes the Mean Absolute Percentage Error (MAPE) as a percentage value.
+        """
+        season_demand = np.sum(test_item_series, axis=0).values
+        return np.mean(bootstrap_samples - season_demand / season_demand) * 100
 
     @staticmethod
     def mae(test_item_series: pd.Series, bootstrap_samples: pd.Series) -> float:
@@ -218,6 +226,7 @@ class GridEvaluation:
             "CV": np.std(twin_lbb, ddof=1)/np.mean(twin_lbb) * 100,
             "RMSE": np.sqrt(Metrics.rmse(InputData.TestData[test_item_key], twin_lbb)),
             "MAPE": Metrics.mape(InputData.TestData[test_item_key], twin_lbb),
+            "MPE": Metrics.mpe(InputData.TestData[test_item_key], twin_lbb),
             "MAE": Metrics.mae(InputData.TestData[test_item_key], twin_lbb),
             "WASSERSTEIN": Metrics.discrete_wasserstein(test_lbb, twin_lbb),
         }
@@ -241,6 +250,7 @@ class GridEvaluation:
             "CV": np.std(twin_idd, ddof=1)/np.mean(twin_idd) * 100,
             "RMSE": Metrics.rmse(InputData.TestData[test_item_key], twin_idd),
             "MAPE": Metrics.mape(InputData.TestData[test_item_key], twin_idd),
+            "MPE": Metrics.mpe(InputData.TestData[test_item_key], twin_idd),
             "MAE": Metrics.mae(InputData.TestData[test_item_key], twin_idd),
             "WASSERSTEIN": Metrics.discrete_wasserstein(test_idd, twin_idd),
         }
@@ -263,6 +273,7 @@ class GridEvaluation:
         for batch in tqdm(batches, desc="Batch processing and streaming"):
             
             #hier wir parallelisiert sein Vater auf allen meinen 8 Kirschkernen
+            #delayed = decorator used to capture the arguments of a function, later passed to the Parallel scheduler
             cls.write_results(Parallel(n_jobs=-1)(
             delayed(cls.evaluate_lbb)(test_item_key, b, w) 
             for w, b, _ in grid 
