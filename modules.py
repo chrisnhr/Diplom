@@ -15,12 +15,14 @@ class InputData:
     TestData = {}  # Store TestData as a class attribute
     TwinData = {}  # Store TwinData as a class attribute
 
-    def __init__(self, file_name: str = "twins_100"):
+    def __init__(self, demand_column = "ANSPRACHE", max_twin_num = 10, file_name: str = "twins_100"):
         """Loads data from a CSV file and initializes unique communication keys."""
-        self.data = pd.read_csv(f"{self.data_path}/{file_name}.csv")
 
+        self.demand_column = demand_column
+        self.max_twin_num = max_twin_num
+        self.data = pd.read_csv(f"{self.data_path}/{file_name}.csv")
         self.TestData = {key : self.get_test_item(key) for key in self.data["TEST_ITEM_COMMUNICATIONKEY"].unique()}
-        self.TwinData = {key : self.get_twin_item(key, 10) for key in self.data["TEST_ITEM_COMMUNICATIONKEY"].unique()}
+        self.TwinData = {key : self.get_twin_item(key, self.max_twin_num) for key in self.data["TEST_ITEM_COMMUNICATIONKEY"].unique()}
 
     @classmethod
     def load_data(cls, file_name: str = "twins_100"):
@@ -28,7 +30,7 @@ class InputData:
         cls.data = pd.read_csv(f"{cls.data_path}/{file_name}.csv")
 
         cls.TestData = {key: cls.get_test_item(cls, key) for key in cls.data["TEST_ITEM_COMMUNICATIONKEY"].unique()}
-        cls.TwinData = {key: cls.get_twin_item(cls, key, 10) for key in cls.data["TEST_ITEM_COMMUNICATIONKEY"].unique()}
+        cls.TwinData = {key: cls.get_twin_item(cls, key, self.max_twin_num) for key in cls.data["TEST_ITEM_COMMUNICATIONKEY"].unique()}
     
     @classmethod
     def download_from_bq(cls, table_id: str = "CN_data_to_fetch", filename: str = "twins_100"):
@@ -45,7 +47,7 @@ class InputData:
         df = self.data.loc[
             (self.data["TEST_ITEM_COMMUNICATIONKEY"] == key) & 
             (self.data["TEST_ITEM_COMMUNICATIONKEY"] == self.data["TWIN_ITEM_COMMUNICATIONKEY"]),
-            ["CALENDAR_DATE", "TWIN_ITEM_COMMUNICATIONKEY", "ANSPRACHE"]
+            ["CALENDAR_DATE", "TWIN_ITEM_COMMUNICATIONKEY", self.demand_column]
         ].reset_index(drop=True)
         
         nan_count = df.isna().sum().sum()
@@ -53,17 +55,17 @@ class InputData:
             print(f"There are {nan_count} NaN values in the data which are replaced with 0s.")
             df.fillna(0, inplace=True)
         
-        return df.pivot(index="CALENDAR_DATE", columns="TWIN_ITEM_COMMUNICATIONKEY", values="ANSPRACHE")
+        return df.pivot(index="CALENDAR_DATE", columns="TWIN_ITEM_COMMUNICATIONKEY", values=self.demand_column)
 
     def get_twin_item(self, key: int, num_twins: int) -> pd.DataFrame:
         """Retrieves twin item data."""
         df = self.data.loc[
             (self.data["TEST_ITEM_COMMUNICATIONKEY"] == key) & 
             (self.data["TEST_ITEM_COMMUNICATIONKEY"] != self.data["TWIN_ITEM_COMMUNICATIONKEY"]),
-            ["CALENDAR_DATE", "TWIN_ITEM_COMMUNICATIONKEY", "ANSPRACHE"]
+            ["CALENDAR_DATE", "TWIN_ITEM_COMMUNICATIONKEY", self.demand_column]
         ].reset_index(drop=True)
         
-        df = df.pivot(index="CALENDAR_DATE", columns="TWIN_ITEM_COMMUNICATIONKEY", values="ANSPRACHE")
+        df = df.pivot(index="CALENDAR_DATE", columns="TWIN_ITEM_COMMUNICATIONKEY", values=self.demand_column)
         df = df.iloc[:, :num_twins]  # Reduce to the desired number of twin items
         
         nan_count = df.isna().sum().sum()
@@ -170,7 +172,7 @@ class Metrics:
         Computes the Mean Absolute Percentage Error (MAPE) as a percentage value.
         """
         season_demand = np.sum(test_item_series, axis=0).values
-        return np.mean(bootstrap_samples - season_demand / season_demand) * 100
+        return np.mean((bootstrap_samples - season_demand) / season_demand) * 100
 
     @staticmethod
     def mae(test_item_series: pd.Series, bootstrap_samples: pd.Series) -> float:
@@ -282,6 +284,3 @@ class GridEvaluation:
             cls.write_results(Parallel(n_jobs=-1)(
             delayed(cls.evaluate_idd)(test_item_key)
             for test_item_key in batch))
-
-### will be run on overy import    
-InputData.load_data()
