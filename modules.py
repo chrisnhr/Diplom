@@ -22,7 +22,7 @@ class InputData:
         self.max_twin_num = max_twin_num
         self.data = pd.read_csv(f"{self.data_path}/{file_name}.csv")
         self.TestData = {key : self.get_test_item(key) for key in self.data["TEST_ITEM_COMMUNICATIONKEY"].unique()}
-        self.TwinData = {key : self.get_twin_item(key, self.max_twin_num) for key in self.data["TEST_ITEM_COMMUNICATIONKEY"].unique()}
+        self.TwinData = {key : self.get_twin_item(key, 10) for key in self.data["TEST_ITEM_COMMUNICATIONKEY"].unique()}
 
     @classmethod
     def load_data(cls, file_name: str = "twins_100"):
@@ -30,7 +30,7 @@ class InputData:
         cls.data = pd.read_csv(f"{cls.data_path}/{file_name}.csv")
 
         cls.TestData = {key: cls.get_test_item(cls, key) for key in cls.data["TEST_ITEM_COMMUNICATIONKEY"].unique()}
-        cls.TwinData = {key: cls.get_twin_item(cls, key, self.max_twin_num) for key in cls.data["TEST_ITEM_COMMUNICATIONKEY"].unique()}
+        cls.TwinData = {key: cls.get_twin_item(cls, key, 10) for key in cls.data["TEST_ITEM_COMMUNICATIONKEY"].unique()}
     
     @classmethod
     def download_from_bq(cls, table_id: str = "CN_data_to_fetch", filename: str = "twins_100"):
