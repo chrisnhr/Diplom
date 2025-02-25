@@ -1,6 +1,4 @@
 import numpy as np
-import matplotlib.pyplot as plt
-import scipy.stats as stats
 import pandas as pd
 from google.cloud import bigquery as bq
 from tqdm.notebook import tqdm
@@ -12,8 +10,8 @@ class InputData:
     project_id = "brain-flash-dev"
     dataset_id = "dagster_common"
     data_path = "data"
-    TestData = {}  # Store TestData as a class attribute
-    TwinData = {}  # Store TwinData as a class attribute
+    #TestData = {}  # Store TestData as a class attribute
+    #TwinData = {}  # Store TwinData as a class attribute
 
     def __init__(self, demand_column = "ANSPRACHE", max_twin_num = 10, file_name: str = "twins_100"):
         """Loads data from a CSV file and initializes unique communication keys."""
@@ -22,15 +20,15 @@ class InputData:
         self.max_twin_num = max_twin_num
         self.data = pd.read_csv(f"{self.data_path}/{file_name}.csv")
         self.TestData = {key : self.get_test_item(key) for key in self.data["TEST_ITEM_COMMUNICATIONKEY"].unique()}
-        self.TwinData = {key : self.get_twin_item(key, 10) for key in self.data["TEST_ITEM_COMMUNICATIONKEY"].unique()}
+        self.TwinData = {key : self.get_twin_item(key, self.max_twin_num) for key in self.data["TEST_ITEM_COMMUNICATIONKEY"].unique()}
 
-    @classmethod
-    def load_data(cls, file_name: str = "twins_100"):
-        """Loads data from a CSV file and initializes class-level TestData and TwinData."""
-        cls.data = pd.read_csv(f"{cls.data_path}/{file_name}.csv")
+    # @classmethod
+    # def load_data(cls, file_name: str = "twins_100"):
+    #     """Loads data from a CSV file and initializes class-level TestData and TwinData."""
+    #     cls.data = pd.read_csv(f"{cls.data_path}/{file_name}.csv")
 
-        cls.TestData = {key: cls.get_test_item(cls, key) for key in cls.data["TEST_ITEM_COMMUNICATIONKEY"].unique()}
-        cls.TwinData = {key: cls.get_twin_item(cls, key, 10) for key in cls.data["TEST_ITEM_COMMUNICATIONKEY"].unique()}
+    #     cls.TestData = {key: cls.get_test_item(cls, key) for key in cls.data["TEST_ITEM_COMMUNICATIONKEY"].unique()}
+    #     cls.TwinData = {key: cls.get_twin_item(cls, key, 10) for key in cls.data["TEST_ITEM_COMMUNICATIONKEY"].unique()}
     
     @classmethod
     def download_from_bq(cls, table_id: str = "CN_data_to_fetch", filename: str = "twins_100"):
@@ -75,7 +73,7 @@ class InputData:
         return df
 
 class Resampling:
-    num_samples = 5000 # maintained on class level to ensure comparability between experiments
+    num_samples: int = 5000 # maintained on class level to ensure comparability between experiments
 
     @classmethod
     def iid_bootstrap(cls, data: pd.DataFrame) -> pd.Series:
@@ -211,60 +209,62 @@ class GridEvaluation:
     batch_size = 5
 
     @staticmethod
-    def evaluate_lbb(test_item_key, b, w):
+    def evaluate_lbb(input_data: InputData, test_item_key: int, b: int, w: int):
 
-        twin_lbb = Resampling.lb_bootstrap(InputData.TwinData[test_item_key], window_size = w, block_size = b)
-        test_lbb = Resampling.lb_bootstrap(InputData.TestData[test_item_key], window_size = w, block_size = b)
+        twin_lbb = Resampling.lb_bootstrap(input_data.TwinData[test_item_key], window_size = w, block_size = b)
+        test_lbb = Resampling.lb_bootstrap(input_data.TestData[test_item_key], window_size = w, block_size = b)
 
         summary = {
             "TEST_ITEM_COMMUNICATIONKEY": test_item_key,
             "BLOCK_SIZE": b,
             "WINDOW_SIZE": w,
-            "TWIN_NUMBER": InputData.TwinData[test_item_key].shape[1],
+            "TWIN_NUMBER": input_data.TwinData[test_item_key].shape[1],
             "MEAN_SAMPLE": np.mean(twin_lbb),
-            "MEAN_TEST": np.mean(InputData.TestData[test_item_key].sum(axis=0)),
-            "BIAS": np.mean(twin_lbb)-np.mean(InputData.TestData[test_item_key].sum(axis=0)),
+            "MEAN_TEST": np.mean(input_data.TestData[test_item_key].sum(axis=0)),
+            "BIAS": np.mean(twin_lbb)-np.mean(input_data.TestData[test_item_key].sum(axis=0)),
             "VARIANCE": np.var(twin_lbb, ddof=1),
             "CV": np.std(twin_lbb, ddof=1)/np.mean(twin_lbb) * 100,
-            "RMSE": np.sqrt(Metrics.rmse(InputData.TestData[test_item_key], twin_lbb)),
-            "MAPE": Metrics.mape(InputData.TestData[test_item_key], twin_lbb),
-            "MPE": Metrics.mpe(InputData.TestData[test_item_key], twin_lbb),
-            "MAE": Metrics.mae(InputData.TestData[test_item_key], twin_lbb),
+            "RMSE": np.sqrt(Metrics.rmse(input_data.TestData[test_item_key], twin_lbb)),
+            "MAPE": Metrics.mape(input_data.TestData[test_item_key], twin_lbb),
+            "MPE": Metrics.mpe(input_data.TestData[test_item_key], twin_lbb),
+            "MAE": Metrics.mae(input_data.TestData[test_item_key], twin_lbb),
             "WASSERSTEIN": Metrics.discrete_wasserstein(test_lbb, twin_lbb),
         }
         return summary
     
     @staticmethod
-    def evaluate_idd(test_item_key):
+    def evaluate_idd(input_data: InputData, test_item_key: int):
         
-        twin_idd = Resampling.iid_bootstrap(InputData.TwinData[test_item_key])
-        test_idd = Resampling.iid_bootstrap(InputData.TestData[test_item_key])
+        twin_idd = Resampling.iid_bootstrap(input_data.TwinData[test_item_key])
+        test_idd = Resampling.iid_bootstrap(input_data.TestData[test_item_key])
 
         summary = {
             "TEST_ITEM_COMMUNICATIONKEY": test_item_key,
             "BLOCK_SIZE": 1,
             "WINDOW_SIZE": 0,
-            "TWIN_NUMBER": InputData.TwinData[test_item_key].shape[1],
+            "TWIN_NUMBER": input_data.TwinData[test_item_key].shape[1],
             "MEAN_SAMPLE": np.mean(twin_idd),
-            "MEAN_TEST": np.mean(InputData.TestData[test_item_key].sum(axis=0)),
-            "BIAS": np.mean(twin_idd)-np.mean(InputData.TestData[test_item_key].sum(axis=0)),
+            "MEAN_TEST": np.mean(input_data.TestData[test_item_key].sum(axis=0)),
+            "BIAS": np.mean(twin_idd)-np.mean(input_data.TestData[test_item_key].sum(axis=0)),
             "VARIANCE": np.var(twin_idd, ddof=1),
             "CV": np.std(twin_idd, ddof=1)/np.mean(twin_idd) * 100,
-            "RMSE": Metrics.rmse(InputData.TestData[test_item_key], twin_idd),
-            "MAPE": Metrics.mape(InputData.TestData[test_item_key], twin_idd),
-            "MPE": Metrics.mpe(InputData.TestData[test_item_key], twin_idd),
-            "MAE": Metrics.mae(InputData.TestData[test_item_key], twin_idd),
+            "RMSE": Metrics.rmse(input_data.TestData[test_item_key], twin_idd),
+            "MAPE": Metrics.mape(input_data.TestData[test_item_key], twin_idd),
+            "MPE": Metrics.mpe(input_data.TestData[test_item_key], twin_idd),
+            "MAE": Metrics.mae(input_data.TestData[test_item_key], twin_idd),
             "WASSERSTEIN": Metrics.discrete_wasserstein(test_idd, twin_idd),
         }
         return summary
     
     @classmethod
-    def write_results(cls, results):
+    def write_results(cls, results: list):
         df = pd.DataFrame(results)
         df.to_csv(cls.output_file, mode="a", header=not os.path.exists(cls.output_file), index=False)
     
     @classmethod
-    def run(cls, keys):
+    def run(cls, input_data:InputData):
+
+        keys = list(input_data.TestData.keys())
 
         batches = [keys[i:i + cls.batch_size] for i in range(0, len(keys), cls.batch_size)]
         grid = [(w, b, cls.max_twin_number) for b in range(1, cls.max_block_size + 1, 3) for w in range(1, cls.max_window_size + 1, 4)]
@@ -277,10 +277,10 @@ class GridEvaluation:
             #hier wir parallelisiert sein Vater auf allen meinen 8 Kirschkernen
             #delayed = decorator used to capture the arguments of a function, later passed to the Parallel scheduler
             cls.write_results(Parallel(n_jobs=-1)(
-            delayed(cls.evaluate_lbb)(test_item_key, b, w) 
+            delayed(cls.evaluate_lbb)(input_data, test_item_key, b, w)#hier gebe ich jetzt jedes mal die ganze instance rein, statt nur den schlüssel #key, input data, test data
             for w, b, _ in grid 
             for test_item_key in batch))
 
             cls.write_results(Parallel(n_jobs=-1)(
-            delayed(cls.evaluate_idd)(test_item_key)
+            delayed(cls.evaluate_idd)(input_data, test_item_key)
             for test_item_key in batch))
