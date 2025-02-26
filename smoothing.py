@@ -47,7 +47,7 @@ plt.show()
 # Apply smoothing and plot
 plt.figure(figsize=(15, 5))
 for column in test_dataframe.columns:
-    smoothed_series = kernel_smoothing_gaussian(test_dataframe[column], kernel_size=9)
+    smoothed_series = kernel_smoothing_gaussian(test_dataframe[column], kernel_size=7)
     plt.plot(smoothed_series, label=column)
 
 plt.legend()
@@ -55,6 +55,4 @@ ax = plt.gca()
 ax.xaxis.set_major_locator(ticker.MaxNLocator(nbins=10))
 plt.title("Smoothed Time Series")
 plt.show()
-
-
 # %%
