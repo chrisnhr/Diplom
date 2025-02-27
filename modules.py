@@ -148,26 +148,35 @@ class Resampling:
 class Metrics:
 
     @staticmethod
-    def bias(test_raw: pd.Series, twin_sampled: pd.Series) -> float:
+    def target_bias(test_raw: pd.Series, twin_sampled: pd.Series) -> float:
         """
         Computes the Bias of the bootstrap samples.
         """
-        season_demand = np.sum(test_raw, axis=0).values
+        season_demand = np.sum(test_raw, axis=0).item()
+        #will ich die Abweichungen averagen oder die abweichung des averages?
         return np.mean(twin_sampled) - season_demand
     
     @staticmethod
-    def variance(twin_sampled: pd.Series) -> float:
+    def resampling_variance(twin_sampled: pd.Series) -> float:
         """
-        Computes the Variance of the bootstrap samples.
+        Computes the in-distribution variance of the bootstrap samples.
         """
         return np.var(twin_sampled, ddof=1)
+    
+    @staticmethod
+    def target_variance(twin_sampled: pd.Series,test_raw: pd.Series) -> float:
+        """
+        Computes the Target Variance or Out-of-distribution variance of the bootstrap samples.
+        """
+        season_demand = np.sum(test_raw, axis=0).values
+        return np.sum((twin_sampled - season_demand) ** 2) / (len(test_raw) - 1)
     
     @staticmethod
     def cv(twin_sampled: pd.Series) -> float:
         """
         Computes the Coefficient of Variation (CV) of the bootstrap samples.
         """
-        return np.std(twin_sampled, ddof=1) / np.mean(twin_sampled) * 100
+        return np.std(twin_sampled, ddof=1) / np.mean(twin_sampled)
 
     @staticmethod
     def rmse(test_raw: pd.Series, twin_sampled: pd.Series) -> float:
@@ -189,7 +198,7 @@ class Metrics:
         Computes the Mean Absolute Percentage Error (MAPE) as a percentage value.
         """
         season_demand = np.sum(test_raw, axis=0).values
-        return np.mean(np.abs(twin_sampled - season_demand) / season_demand) * 100
+        return np.mean(np.abs(twin_sampled - season_demand) / season_demand)
     
     @staticmethod
     def mpe(test_raw: pd.Series, twin_sampled: pd.Series) -> float:
@@ -197,7 +206,7 @@ class Metrics:
         Computes the Mean Absolute Percentage Error (MAPE) as a percentage value.
         """
         season_demand = np.sum(test_raw, axis=0).values
-        return np.mean((twin_sampled - season_demand) / season_demand) * 100
+        return np.mean((twin_sampled - season_demand) / season_demand)
 
     @staticmethod
     def mae(test_raw: pd.Series, twin_sampled: pd.Series) -> float:
@@ -245,9 +254,10 @@ class Evaluation:
             "TWIN_NUMBER": twin_raw.shape[1],
             "MEAN_SAMPLE": np.mean(twin_lbb),
             "MEAN_TEST": np.mean(test_raw.sum(axis=0)),
-            "BIAS": np.mean(twin_lbb)-np.mean(test_raw.sum(axis=0)),
-            "VARIANCE": np.var(twin_lbb, ddof=1),
-            "CV": np.std(twin_lbb, ddof=1)/np.mean(twin_lbb) * 100,
+            "BIAS": Metrics.target_bias(test_raw, twin_lbb),
+            "RESAMPLING_VARIANCE": Metrics.resampling_variance(twin_lbb),
+            "TARGET_VARIANCE": Metrics.target_variance(twin_lbb, test_raw),
+            "CV": Metrics.cv(twin_lbb),
             "RMSE": Metrics.rmse(test_raw, twin_lbb),
             "MAPE": Metrics.mape(test_raw, twin_lbb),
             "MPE": Metrics.mpe(test_raw, twin_lbb),
@@ -266,9 +276,10 @@ class Evaluation:
             "TWIN_NUMBER": twin_raw.shape[1],
             "MEAN_SAMPLE": np.mean(twin_idd),
             "MEAN_TEST": np.mean(test_raw.sum(axis=0)),
-            "BIAS": np.mean(twin_idd)-np.mean(test_raw.sum(axis=0)),
-            "VARIANCE": np.var(twin_idd, ddof=1),
-            "CV": np.std(twin_idd, ddof=1)/np.mean(twin_idd) * 100,
+            "BIAS": Metrics.target_bias(test_raw, twin_idd),
+            "RESAMPLING_VARIANCE": Metrics.resampling_variance(twin_idd),
+            "TARGET_VARIANCE": Metrics.target_variance(twin_idd, test_raw),
+            "CV": Metrics.cv(twin_idd),
             "RMSE": Metrics.rmse(test_raw, twin_idd),
             "MAPE": Metrics.mape(test_raw, twin_idd),
             "MPE": Metrics.mpe(test_raw, twin_idd),
@@ -294,7 +305,7 @@ class Evaluation:
             return cls.evaluate_idd(twin_raw, test_raw, twin_idd, test_idd, test_item_key)
     
     @classmethod
-    def run_ (cls, input_data: InputData, output_file: str = "grid_results"):
+    def run_grid(cls, input_data: InputData, output_file: str = "grid_results"):
 
         keys = list(input_data.TestData.keys())
         batches = [keys[i:i + cls.batch_size] for i in range(0, len(keys), cls.batch_size)]
@@ -303,6 +314,7 @@ class Evaluation:
         all_results = []
         for batch in tqdm(batches, desc="Parameter Grid Search"):
             
+            #batch size can be included in the Parallel class
             lbb_results = Parallel(n_jobs=-1)(
                 delayed(cls.run_lbb)(input_data.TwinData[test_item_key], input_data.TestData[test_item_key], test_item_key, w, b)
                 for w, b, _ in grid 
