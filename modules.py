@@ -148,42 +148,64 @@ class Resampling:
 class Metrics:
 
     @staticmethod
-    def rmse(test_item_series: pd.Series, bootstrap_samples: pd.Series) -> float:
+    def bias(test_raw: pd.Series, twin_sampled: pd.Series) -> float:
+        """
+        Computes the Bias of the bootstrap samples.
+        """
+        season_demand = np.sum(test_raw, axis=0).values
+        return np.mean(twin_sampled) - season_demand
+    
+    @staticmethod
+    def variance(twin_sampled: pd.Series) -> float:
+        """
+        Computes the Variance of the bootstrap samples.
+        """
+        return np.var(twin_sampled, ddof=1)
+    
+    @staticmethod
+    def cv(twin_sampled: pd.Series) -> float:
+        """
+        Computes the Coefficient of Variation (CV) of the bootstrap samples.
+        """
+        return np.std(twin_sampled, ddof=1) / np.mean(twin_sampled) * 100
+
+    @staticmethod
+    def rmse(test_raw: pd.Series, twin_sampled: pd.Series) -> float:
         """
         Wie kann ich denn den RMSE normieren für die Zeitreihen?
         -> nehme ich da die Testreihe oder die Twins zum normieren?
         """
-        season_demand = np.sum(test_item_series, axis=0).values
-        bias = (np.mean(bootstrap_samples) - season_demand) ** 2
+        season_demand = np.sum(test_raw, axis=0).values
+        bias = (np.mean(twin_sampled) - season_demand) ** 2
         
-        variance = np.var(bootstrap_samples, ddof=1)  # Using sample variance (ddof=1 for unbiased estimator)
+        variance = np.var(twin_sampled, ddof=1)  # Using sample variance (ddof=1 for unbiased estimator)
         
         mse = bias + variance
         return np.sqrt(mse).item()
     
     @staticmethod
-    def mape(test_item_series: pd.Series, bootstrap_samples: pd.Series) -> float:
+    def mape(test_raw: pd.Series, twin_sampled: pd.Series) -> float:
         """
         Computes the Mean Absolute Percentage Error (MAPE) as a percentage value.
         """
-        season_demand = np.sum(test_item_series, axis=0).values
-        return np.mean(np.abs(bootstrap_samples - season_demand) / season_demand) * 100
+        season_demand = np.sum(test_raw, axis=0).values
+        return np.mean(np.abs(twin_sampled - season_demand) / season_demand) * 100
     
     @staticmethod
-    def mpe(test_item_series: pd.Series, bootstrap_samples: pd.Series) -> float:
+    def mpe(test_raw: pd.Series, twin_sampled: pd.Series) -> float:
         """
         Computes the Mean Absolute Percentage Error (MAPE) as a percentage value.
         """
-        season_demand = np.sum(test_item_series, axis=0).values
-        return np.mean((bootstrap_samples - season_demand) / season_demand) * 100
+        season_demand = np.sum(test_raw, axis=0).values
+        return np.mean((twin_sampled - season_demand) / season_demand) * 100
 
     @staticmethod
-    def mae(test_item_series: pd.Series, bootstrap_samples: pd.Series) -> float:
+    def mae(test_raw: pd.Series, twin_sampled: pd.Series) -> float:
         """
         Computes the Mean Absolute Error (MAE).
         """
-        season_demand = np.sum(test_item_series, axis=0).values
-        return np.mean(np.abs(bootstrap_samples - season_demand))
+        season_demand = np.sum(test_raw, axis=0).values
+        return np.mean(np.abs(twin_sampled - season_demand))
 
     @staticmethod
     def discrete_wasserstein(dist1: pd.Series, dist2:pd.Series, p: int= 2) -> float:
@@ -205,102 +227,94 @@ class Metrics:
 
         return np.power(np.sum(np.abs(dist1_sorted - dist2_sorted) ** p) / len(dist1), 1 / p)
     
-class GridEvaluation:
+class Evaluation:
 
+    results_folder = "results"
     max_window_size = 60
     max_block_size = 30
     max_twin_number = 10
     batch_size = 5
 
     @staticmethod
-    def evaluate_lbb(test_data: pd.DataFrame, twin_data: pd.DataFrame, test_item_key: int, b: int, w: int):
-
-        twin_lbb = Resampling.lb_bootstrap(twin_data, window_size = w, block_size = b)
-        test_lbb = Resampling.lb_bootstrap(test_data, window_size = w, block_size = b)
+    def evaluate_lbb(twin_raw: pd.DataFrame, test_raw: pd.DataFrame, twin_lbb: pd.DataFrame, test_lbb: pd.DataFrame, test_item_key: int, w: int, b: int):
 
         summary = {
             "TEST_ITEM_COMMUNICATIONKEY": test_item_key,
             "BLOCK_SIZE": b,
             "WINDOW_SIZE": w,
-            "TWIN_NUMBER": twin_data.shape[1],
+            "TWIN_NUMBER": twin_raw.shape[1],
             "MEAN_SAMPLE": np.mean(twin_lbb),
-            "MEAN_TEST": np.mean(test_data.sum(axis=0)),
-            "BIAS": np.mean(twin_lbb)-np.mean(test_data.sum(axis=0)),
+            "MEAN_TEST": np.mean(test_raw.sum(axis=0)),
+            "BIAS": np.mean(twin_lbb)-np.mean(test_raw.sum(axis=0)),
             "VARIANCE": np.var(twin_lbb, ddof=1),
             "CV": np.std(twin_lbb, ddof=1)/np.mean(twin_lbb) * 100,
-            "RMSE": np.sqrt(Metrics.rmse(test_data, twin_lbb)),
-            "MAPE": Metrics.mape(test_data, twin_lbb),
-            "MPE": Metrics.mpe(test_data, twin_lbb),
-            "MAE": Metrics.mae(test_data, twin_lbb),
+            "RMSE": Metrics.rmse(test_raw, twin_lbb),
+            "MAPE": Metrics.mape(test_raw, twin_lbb),
+            "MPE": Metrics.mpe(test_raw, twin_lbb),
+            "MAE": Metrics.mae(test_raw, twin_lbb),
             "WASSERSTEIN": Metrics.discrete_wasserstein(test_lbb, twin_lbb),
         }
         return summary
     
     @staticmethod
-    def evaluate_idd(test_data: pd.DataFrame, twin_data: pd.DataFrame, test_item_key: int):
-        
-        twin_idd = Resampling.iid_bootstrap(twin_data)
-        test_idd = Resampling.iid_bootstrap(test_data)
+    def evaluate_idd(twin_raw: pd.DataFrame, test_raw: pd.DataFrame, twin_idd: pd.DataFrame, test_idd:pd.DataFrame, test_item_key:int):
 
         summary = {
             "TEST_ITEM_COMMUNICATIONKEY": test_item_key,
             "BLOCK_SIZE": 1,
             "WINDOW_SIZE": 0,
-            "TWIN_NUMBER": twin_data.shape[1],
+            "TWIN_NUMBER": twin_raw.shape[1],
             "MEAN_SAMPLE": np.mean(twin_idd),
-            "MEAN_TEST": np.mean(test_data.sum(axis=0)),
-            "BIAS": np.mean(twin_idd)-np.mean(test_data.sum(axis=0)),
+            "MEAN_TEST": np.mean(test_raw.sum(axis=0)),
+            "BIAS": np.mean(twin_idd)-np.mean(test_raw.sum(axis=0)),
             "VARIANCE": np.var(twin_idd, ddof=1),
             "CV": np.std(twin_idd, ddof=1)/np.mean(twin_idd) * 100,
-            "RMSE": Metrics.rmse(test_data, twin_idd),
-            "MAPE": Metrics.mape(test_data, twin_idd),
-            "MPE": Metrics.mpe(test_data, twin_idd),
-            "MAE": Metrics.mae(test_data, twin_idd),
+            "RMSE": Metrics.rmse(test_raw, twin_idd),
+            "MAPE": Metrics.mape(test_raw, twin_idd),
+            "MPE": Metrics.mpe(test_raw, twin_idd),
+            "MAE": Metrics.mae(test_raw, twin_idd),
             "WASSERSTEIN": Metrics.discrete_wasserstein(test_idd, twin_idd),
         }
         return summary
     
-    ä#hier vor ne loop über alle keys, die auch die daten sliced
-    def run_lbb(twin_raw: pd.DataFrame, test_raw: pd.DataFrame, test_item_key: int, params):
+    @classmethod
+    def run_lbb(cls, twin_raw: pd.DataFrame, test_raw: pd.DataFrame, test_item_key: int, w, b):
 
-            twin_lbb = Resampling.lb_bootstrap(twin_raw, *params)
-            test_lbb = Resampling.lb_bootstrap(test_raw, *params)
+            twin_lbb = Resampling.lb_bootstrap(twin_raw, w, b)
+            test_lbb = Resampling.lb_bootstrap(test_raw, w, b)
 
-            return GridEvaluation.evaluate_lbb(twin_raw, test_raw, twin_lbb, test_lbb, test_item_key)
+            return cls.evaluate_lbb(twin_raw, test_raw, twin_lbb, test_lbb, test_item_key, w, b)
     
-    def run_idd(twin_raw: pd.DataFrame, test_raw: pd.DataFrame, test_item_key: int):
+    @classmethod
+    def run_idd(cls, twin_raw: pd.DataFrame, test_raw: pd.DataFrame, test_item_key: int):
         
             twin_idd = Resampling.iid_bootstrap(twin_raw)
             test_idd = Resampling.iid_bootstrap(test_raw)
 
-            return GridEvaluation.evaluate_idd(twin_raw, test_raw, twin_idd, test_idd, test_item_key)
-
-        
-        #führe lbb aus für anzahl an twins im input
-        #noch aus der evaluation function das sampling auslagern, unten in der parallelisierung muss ich dann run_lbb statt der evaluation einfügen
+            return cls.evaluate_idd(twin_raw, test_raw, twin_idd, test_idd, test_item_key)
     
     @classmethod
-    def run(cls, input_data: InputData, output_file: str = "results/grid_results.csv"):
+    def run_ (cls, input_data: InputData, output_file: str = "grid_results"):
+
         keys = list(input_data.TestData.keys())
         batches = [keys[i:i + cls.batch_size] for i in range(0, len(keys), cls.batch_size)]
         grid = [(w, b, cls.max_twin_number) for b in range(1, cls.max_block_size + 1, 3) for w in range(1, cls.max_window_size + 1, 4)]
         
         all_results = []
-        for batch in tqdm(batches, desc="Processing the parameter grid in batches"):
+        for batch in tqdm(batches, desc="Parameter Grid Search"):
             
             lbb_results = Parallel(n_jobs=-1)(
-                delayed(cls.evaluate_lbb)(input_data.TestData[test_item_key], input_data.TwinData[test_item_key], test_item_key, b, w)
+                delayed(cls.run_lbb)(input_data.TwinData[test_item_key], input_data.TestData[test_item_key], test_item_key, w, b)
                 for w, b, _ in grid 
                 for test_item_key in batch
             )
             
             idd_results = Parallel(n_jobs=-1)(
-                delayed(cls.evaluate_idd)(input_data.TestData[test_item_key], input_data.TwinData[test_item_key], test_item_key)
+                delayed(cls.run_idd)(input_data.TwinData[test_item_key], input_data.TestData[test_item_key], test_item_key)
                 for test_item_key in batch
             )
             
             all_results.extend(lbb_results + idd_results)
         
-        if all_results:
-            df = pd.DataFrame(all_results)
-            df.to_csv(output_file, index=False)
+        df = pd.DataFrame(all_results)
+        df.to_csv(f"{cls.results_folder}/{output_file}.csv", index=False)
