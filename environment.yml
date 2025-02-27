@@ -6,7 +6,6 @@ dependencies:
   - python=3.9
   - numpy
   - pandas
-  - polars
   - matplotlib
   - seaborn
   - ipykernel
@@ -15,4 +14,7 @@ dependencies:
   - google-cloud-bigquery
   - pyarrow=14.0.1  # Ensure compatibility with BigQuery
   - tqdm
+  - plotly
+  - scipy
+  - scikit-learn
   - pip
