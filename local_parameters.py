@@ -29,7 +29,7 @@ df_grid_results = pd.read_csv("results/grid_results.csv")
 #df_grid_results.query("TEST_ITEM_COMMUNICATIONKEY == 804245827 & WINDOW_SIZE != 0").sort_values("WASSERSTEIN")
 
 # %%
-def dimensionality_reduction(vectors, method="tsne", n_components=2, perplexity=30, random_state=161):
+def dimensionality_reduction(vectors, method="tsne", n_components=2, perplexity=0.5, random_state=161):
     """
     Apply dimensionality reduction using either t-SNE or PCA.
     
@@ -177,5 +177,5 @@ def main_reduction_and_clustering(df_grid_results, input_data, reduction_method=
     fig.show()
 
 # %%
-main_reduction_and_clustering(df_grid_results, input_data, reduction_method="pca")
+main_reduction_and_clustering(df_grid_results, input_data, reduction_method="tsne")
 # %%
