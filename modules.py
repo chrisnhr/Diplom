@@ -12,9 +12,9 @@ class InputData:
     dataset_id = "dagster_common"
     data_path = "data"
 
-    def __init__(self, demand_column = "ANSPRACHE", max_twin_num = 10, kernel_size = 1, file_name: str = "twins_100"):
+    def __init__(self, demand_column = "ANSPRACHE", max_twin_num = 10, kernel_size = 1, file_name: str = "twins_100", verbose = True):
         """Loads data from a CSV file and initializes unique communication keys."""
-
+        self.verbose = verbose
         self.demand_column = demand_column
         self.max_twin_num = max_twin_num
         self.kernel_size = kernel_size #actually its the kernel size
@@ -51,7 +51,7 @@ class InputData:
         ].reset_index(drop=True)
         
         nan_count = df.isna().sum().sum()
-        if nan_count > 0:
+        if nan_count > 0 and self.verbose:
             print(f"There are {nan_count} NaN values in the data which are replaced with 0s.")
             df.fillna(0, inplace=True)
 
@@ -71,8 +71,8 @@ class InputData:
         df = df.iloc[:, :num_twins]  # Reduce to the desired number of twin items
         
         nan_count = df.isna().sum().sum()
-        if nan_count > 0:
-            #print(f"There are {nan_count} NaN values in the data which are replaced with 0s.")
+        if nan_count > 0 and self.verbose:
+            print(f"There are {nan_count} NaN values in the data which are replaced with 0s.")
             df.fillna(0, inplace=True)
 
         return self.apply_kernel_smoothing(df, kernel_size = self.kernel_size)
