@@ -154,19 +154,27 @@ class Metrics:
         """
         season_demand = np.sum(test_raw, axis=0).item()
         #will ich die Abweichungen averagen oder die abweichung des averages?
+        #-> ist das gleiche :)
         return np.mean(twin_sampled) - season_demand
     
     @staticmethod
-    def resampling_variance(twin_sampled: pd.Series) -> float:
+    def resampling_mean(bootstrapped_samples: pd.Series) -> float:
+        """
+        Computes the in-distribution mean of the bootstrap samples.
+        """
+        return np.mean(bootstrapped_samples)
+    
+    @staticmethod
+    def resampling_variance(bootstrapped_samples: pd.Series) -> float:
         """
         Computes the in-distribution variance of the bootstrap samples.
         """
-        return np.var(twin_sampled, ddof=1)
+        return np.var(bootstrapped_samples, ddof=1)
     
     @staticmethod
-    def target_variance(twin_sampled: pd.Series,test_raw: pd.Series) -> float:
+    def target_variance(twin_sampled: pd.Series, test_raw: pd.Series) -> float:
         """
-        Computes the Target Variance or Out-of-distribution variance of the bootstrap samples.
+        Computes the Target Variance or out-of-distribution variance of the bootstrap samples.
         """
         season_demand = np.sum(test_raw, axis=0).values
         return np.sum((twin_sampled - season_demand) ** 2) / (len(test_raw) - 1)
@@ -255,7 +263,10 @@ class Evaluation:
             "MEAN_SAMPLE": np.mean(twin_lbb),
             "MEAN_TEST": np.mean(test_raw.sum(axis=0)),
             "BIAS": Metrics.target_bias(test_raw, twin_lbb),
-            "RESAMPLING_VARIANCE": Metrics.resampling_variance(twin_lbb),
+            "RESAMPLING_MEAN_TWIN": Metrics.resampling_mean(twin_lbb),
+            "RESAMPLING_MEAN_TEST": Metrics.resampling_mean(test_lbb),
+            "RESAMPLING_VARIANCE_TWIN": Metrics.resampling_variance(twin_lbb),
+            "RESAMPLING_VARIANCE_TEST": Metrics.resampling_variance(test_lbb),
             "TARGET_VARIANCE": Metrics.target_variance(twin_lbb, test_raw),
             "CV": Metrics.cv(twin_lbb),
             "RMSE": Metrics.rmse(test_raw, twin_lbb),
@@ -267,7 +278,7 @@ class Evaluation:
         return summary
     
     @staticmethod
-    def evaluate_idd(twin_raw: pd.DataFrame, test_raw: pd.DataFrame, twin_idd: pd.DataFrame, test_idd:pd.DataFrame, test_item_key:int):
+    def evaluate_idd(twin_raw: pd.DataFrame, test_raw: pd.DataFrame, twin_idd: pd.DataFrame, test_idd: pd.DataFrame, test_item_key: int):
 
         summary = {
             "TEST_ITEM_COMMUNICATIONKEY": test_item_key,
@@ -277,7 +288,10 @@ class Evaluation:
             "MEAN_SAMPLE": np.mean(twin_idd),
             "MEAN_TEST": np.mean(test_raw.sum(axis=0)),
             "BIAS": Metrics.target_bias(test_raw, twin_idd),
-            "RESAMPLING_VARIANCE": Metrics.resampling_variance(twin_idd),
+            "RESAMPLING_MEAN_TWIN": Metrics.resampling_mean(twin_idd),
+            "RESAMPLING_MEAN_TEST": Metrics.resampling_mean(test_idd),
+            "RESAMPLING_VARIANCE_TWIN": Metrics.resampling_variance(twin_idd),
+            "RESAMPLING_VARIANCE_TEST": Metrics.resampling_variance(test_idd),
             "TARGET_VARIANCE": Metrics.target_variance(twin_idd, test_raw),
             "CV": Metrics.cv(twin_idd),
             "RMSE": Metrics.rmse(test_raw, twin_idd),
