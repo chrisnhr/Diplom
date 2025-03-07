@@ -18,3 +18,9 @@ dependencies:
   - scipy
   - scikit-learn
   - pip
+  - pip:
+      - vertexai
+      - requests
+      - beautifulsoup4
+      - pillow
+      - kneed
