@@ -78,7 +78,7 @@ class InputData:
         return self.apply_kernel_smoothing(df, kernel_size = self.kernel_size)
 
 class Resampling:
-    num_samples: int = 5000 # maintained on class level to ensure comparability between experiments
+    num_samples: int = 16000 # maintained on class level to ensure comparability between experiments
 
     @classmethod
     def iid_bootstrap(cls, data: pd.DataFrame) -> pd.Series:
@@ -247,7 +247,7 @@ class Metrics:
 class Evaluation:
 
     results_folder = "results"
-    max_window_size = 60
+    max_window_size = 120
     max_block_size = 30
     max_twin_number = 10
     batch_size = 5
