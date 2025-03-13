@@ -3,8 +3,7 @@ import pandas as pd
 from google.cloud import bigquery as bq
 from tqdm.notebook import tqdm
 from joblib import Parallel, delayed
-import os
-import warnings
+from scipy.stats import median_abs_deviation
 from scipy.ndimage import gaussian_filter1d
 
 class InputData:
@@ -148,14 +147,20 @@ class Resampling:
 class Metrics:
 
     @staticmethod
-    def target_bias(test_raw: pd.Series, twin_sampled: pd.Series) -> float:
+    def target_bias_mean(test_raw: pd.Series, twin_sampled: pd.Series) -> float:
         """
         Computes the Bias of the bootstrap samples.
         """
         season_demand = np.sum(test_raw, axis=0).item()
-        #will ich die Abweichungen averagen oder die abweichung des averages?
-        #-> ist das gleiche :)
         return np.mean(twin_sampled) - season_demand
+    
+    @staticmethod
+    def target_bias_median(test_raw: pd.Series, twin_sampled: pd.Series) -> float:
+        """
+        Computes the Bias of the bootstrap samples.
+        """
+        season_demand = np.sum(test_raw, axis=0).item()
+        return np.median(twin_sampled) - season_demand
     
     @staticmethod
     def resampling_mean(bootstrapped_samples: pd.Series) -> float:
@@ -180,9 +185,17 @@ class Metrics:
         return np.sum((twin_sampled - season_demand) ** 2) / (len(test_raw) - 1)
     
     @staticmethod
+    def median_absolute_deviation(bootstrapped_samples: pd.Series) -> float:
+        """
+        Computes the Median Absolute Deviation (MAD) of the bootstrap samples.
+        """
+        return median_abs_deviation(bootstrapped_samples)
+    
+    @staticmethod
     def cv(twin_sampled: pd.Series) -> float:
         """
         Computes the Coefficient of Variation (CV) of the bootstrap samples.
+        Ist eigenlich nur sinnvoll, wenn ich die Zeitreihen unterinander vergleiche, nicht aber das Parametersetting
         """
         return np.std(twin_sampled, ddof=1) / np.mean(twin_sampled)
 
@@ -260,15 +273,17 @@ class Evaluation:
             "BLOCK_SIZE": b,
             "WINDOW_SIZE": w,
             "TWIN_NUMBER": twin_raw.shape[1],
-            "MEAN_SAMPLE": np.mean(twin_lbb),
+            "MEAN_TWIN": np.mean(twin_lbb),
             "MEAN_TEST": np.mean(test_raw.sum(axis=0)),
-            "BIAS": Metrics.target_bias(test_raw, twin_lbb),
+            "BIAS_MEAN": Metrics.target_bias_mean(test_raw, twin_lbb),
+            "BIAS_MEDIAN": Metrics.target_bias_median(test_raw, twin_lbb),
             "RESAMPLING_MEAN_TWIN": Metrics.resampling_mean(twin_lbb),
             "RESAMPLING_MEAN_TEST": Metrics.resampling_mean(test_lbb),
             "RESAMPLING_VARIANCE_TWIN": Metrics.resampling_variance(twin_lbb),
             "RESAMPLING_VARIANCE_TEST": Metrics.resampling_variance(test_lbb),
             "TARGET_VARIANCE": Metrics.target_variance(twin_lbb, test_raw),
-            "CV": Metrics.cv(twin_lbb),
+            "MEDIAN_ABSOLUTE_DEVIATION": Metrics.median_absolute_deviation(twin_lbb),
+            "CV_TWIN": Metrics.cv(twin_lbb),
             "RMSE": Metrics.rmse(test_raw, twin_lbb),
             "MAPE": Metrics.mape(test_raw, twin_lbb),
             "MPE": Metrics.mpe(test_raw, twin_lbb),
@@ -285,15 +300,17 @@ class Evaluation:
             "BLOCK_SIZE": 1,
             "WINDOW_SIZE": 0,
             "TWIN_NUMBER": twin_raw.shape[1],
-            "MEAN_SAMPLE": np.mean(twin_idd),
+            "MEAN_TWIN": np.mean(twin_idd),
             "MEAN_TEST": np.mean(test_raw.sum(axis=0)),
-            "BIAS": Metrics.target_bias(test_raw, twin_idd),
+            "BIAS_MEAN": Metrics.target_bias_mean(test_raw, twin_idd),
+            "BIAS_MEDIAN": Metrics.target_bias_median(test_raw, twin_idd),
             "RESAMPLING_MEAN_TWIN": Metrics.resampling_mean(twin_idd),
             "RESAMPLING_MEAN_TEST": Metrics.resampling_mean(test_idd),
             "RESAMPLING_VARIANCE_TWIN": Metrics.resampling_variance(twin_idd),
             "RESAMPLING_VARIANCE_TEST": Metrics.resampling_variance(test_idd),
             "TARGET_VARIANCE": Metrics.target_variance(twin_idd, test_raw),
-            "CV": Metrics.cv(twin_idd),
+            "MEDIAN_ABSOLUTE_DEVIATION": Metrics.median_absolute_deviation(twin_idd),
+            "CV_TWIN": Metrics.cv(twin_idd),
             "RMSE": Metrics.rmse(test_raw, twin_idd),
             "MAPE": Metrics.mape(test_raw, twin_idd),
             "MPE": Metrics.mpe(test_raw, twin_idd),
